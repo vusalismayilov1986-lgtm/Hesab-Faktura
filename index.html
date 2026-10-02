@@ -23,6 +23,7 @@ body{background:var(--bg);color:var(--fg);font-family:var(--ui);padding:16px}
 .bar select{min-width:min(280px,100%)}
 .bar .chk{flex-direction:row;align-items:center;gap:6px;font-size:13px;color:var(--fg);padding-bottom:7px}
 .bar button{font:inherit;font-size:13px;font-weight:500;border:1px solid var(--line);background:var(--bg);color:var(--fg);border-radius:6px;padding:7px 12px;cursor:pointer}
+.bar button:disabled{opacity:.45;cursor:not-allowed}
 .bar button.pri{background:var(--accent);border-color:var(--accent);color:#fff}
 .bar button:focus-visible,.bar select:focus-visible,.bar input:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
 .hint{max-width:794px;margin:0 auto 10px;font-size:12px;color:var(--muted)}
@@ -51,21 +52,25 @@ table.items td.num{text-align:center}
 table.items tr.total td{font-weight:700;font-size:14px;padding:2px 3px}
 .bank{display:grid;grid-template-columns:150px 1fr;white-space:nowrap;row-gap:3px;margin-top:38px;font-size:13.5px}
 .note{font-style:italic;font-size:12px;line-height:1.25;margin-top:16px;text-align:justify}
-.sign{display:grid;grid-template-columns:260px 160px 1fr;align-items:end;margin-top:28px;font-size:14px}
+.sign{display:grid;grid-template-columns:260px 160px 1fr;align-items:end;margin-top:46px;font-size:14px}
 .sign .it{font-style:italic}
 .sign .line{text-align:right}
-.sign2{display:grid;grid-template-columns:200px 1fr 190px;align-items:end;margin-top:42px;font-weight:700;font-size:14px}
-.sign2 .mid{text-align:center}
+.sign2{display:grid;grid-template-columns:260px 1fr 190px;align-items:end;margin-top:42px;font-weight:700;font-size:14px}
+.sign2 .mid{text-align:left;padding-left:2px;white-space:nowrap}
 .sign2 .ln{border-bottom:1px solid #000;height:16px}
-.my{text-align:right;font-weight:700;margin:22px 92px 54px 0}
-.sheet.compact .my{margin-bottom:30px}
-.foot{border-top:1px dashed #000;padding-top:6px;display:grid;grid-template-columns:150px 1fr;row-gap:3px;font-size:9.5px}
+.my{text-align:right;font-weight:700;margin:22px 92px 36px 0}
+.sheet.compact .my{margin-bottom:18px}
+.sheet{display:flex;flex-direction:column}
+.foot{margin-top:auto;border-top:1px dashed #000;padding-top:6px;display:grid;grid-template-columns:150px 1fr;row-gap:3px;font-size:9.5px}
 .foot a{color:#1a3c8f}
 .rowtools{display:flex;gap:8px;justify-content:flex-end;max-width:794px;margin:8px auto 0}
 .toast{position:fixed;left:50%;bottom:calc(18px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--fg);color:var(--bg);padding:8px 14px;border-radius:6px;font-size:13px}
 @media (max-width:600px){.bar{padding:10px}.bar select{min-width:0;width:100%}.bar label.cust{flex:1 1 100%}}
 @page{size:A4;margin:0}
-@media print{body{background:#fff;padding:0}.bar,.hint,.rowtools,.toast{display:none!important}.scroll{overflow:visible;padding:0}.sheet{box-shadow:none;margin:0 auto}.sheet input:hover,.sheet input:focus{background:transparent;outline:0}#rows tr.pempty{display:none}}
+@media print{body{background:#fff;padding:0}.bar,.hint,.rowtools,.toast{display:none!important}.scroll{overflow:visible;padding:0}.sheet{box-shadow:none;margin:0 auto}.sheet input:hover,.sheet input:focus{background:transparent;outline:0}#rows tr.pempty{display:none}body.zero .scroll{display:none!important}body.zero::before{content:"Ödəniləcək məbləğ 0-dır, faktura çap edilə bilməz";display:block;padding:60px 40px;font:600 18px/1.4 sans-serif;text-align:center}}
+.sheet.pdfmode #rows tr.pempty{display:none}
+.sheet.pdfmode input,.sheet.pdfmode select{background:transparent!important;outline:0!important}
+.sheet.pdfmode{box-shadow:none}
 </style>
 </head>
 <body>
@@ -83,7 +88,8 @@ table.items tr.total td{font-weight:700;font-size:14px;padding:2px 3px}
   <label class="chk"><input id="qeyd" type="checkbox" checked> Təhvil qeydi</label>
   <button id="newBtn" type="button">Yeni faktura</button>
   <button id="nextBtn" class="pri" type="button">Növbəti № ilə yeni</button>
-  <button id="printBtn" type="button">Çap et / PDF</button>
+  <button id="saveBtn" class="pri" type="button">Yadda saxla (PDF)</button>
+  <button id="printBtn" type="button">Çap et</button>
 </div>
 <p class="hint">Fakturanın üzərindəki istənilən sahəyə klikləyib yaza bilərsiniz. Məbləğ, cəm və sözlə yazılış avtomatik hesablanır.</p>
 
@@ -141,7 +147,6 @@ table.items tr.total td{font-weight:700;font-size:14px;padding:2px 3px}
   </div>
 </div>
 </div>
-<div class="rowtools"><button id="addRow" type="button" class="bar-btn" style="font:inherit;font-size:13px;border:1px solid var(--line);background:var(--panel);color:var(--fg);border-radius:6px;padding:6px 12px;cursor:pointer">+ Sətir əlavə et</button></div>
 <div class="toast" id="toast" hidden></div>
 
 <script>
@@ -198,7 +203,13 @@ const CUSTOMERS=[
 ["Avtoservis 555 MMC","2000006461","06/26","30.09.2026"]
 ];
 const $=id=>document.getElementById(id);
-const ROWS=12;
+const ROWS=12, MAXROWS=20;
+let TOTAL=0;
+function updateOutputButtons(){
+  const zero=!(TOTAL>0), msg=zero?"Ödəniləcək məbləğ 0-dır, əvvəlcə mal və qiymət yazın":"";
+  document.body.classList.toggle("zero",zero);
+  ["saveBtn","printBtn"].forEach(id=>{const b=$(id); if(!b||b.dataset.busy) return; b.disabled=zero; b.title=msg;});
+}
 
 /* ---- number to Azerbaijani words (same tables as baza_summ) ---- */
 const ONES=["","bir","iki","üç","dörd","beş","altı","yeddi","səkkiz","doqquz"];
@@ -241,10 +252,15 @@ function calc(){
     tr.querySelector(".am").textContent=isNaN(a)?"":fmt(Math.round(a*100)/100);
     if(!isNaN(a)) total+=a;
   }
-  const rs=$("rows").rows, last=rs[rs.length-1];
-  if(last && last.querySelector(".nm").value.trim()){ makeRow(); return calc(); }
+  /* rows: at least 12, grow one past the last filled row, never more than 20 */
+  const rs=$("rows").rows; let lastFilled=0;
+  for(let k=0;k<rs.length;k++) if(rs[k].querySelector(".nm").value.trim()) lastFilled=k+1;
+  const want=Math.min(MAXROWS, Math.max(ROWS, lastFilled+1));
+  if(rs.length<want){ while($("rows").rows.length<want) makeRow(); return calc(); }
+  if(rs.length>want){ while($("rows").rows.length>want && !$("rows").lastElementChild.querySelector(".nm").value.trim()) $("rows").lastElementChild.remove(); return calc(); }
   $("sheet").classList.toggle("compact", i>12);
   total=Math.round(total*100)/100;
+  TOTAL=total; updateOutputButtons();
   $("totWords").innerHTML=`<b>${fmt(total)}</b>&nbsp;manat (${words(total)})`;
   save();
 }
@@ -279,13 +295,13 @@ function render(s){
   $("cust").value=s.cust||""; $("dateCtl").value=s.date||""; $("qeyd").checked=s.qeyd!==false;
   $("nomCtl").value=s.nom||"";
   $("rows").innerHTML=""; const r=s.rows||[];
-  for(let i=0;i<Math.max(ROWS,r.length);i++) makeRow(r[i]);
+  for(let i=0;i<Math.min(MAXROWS,Math.max(ROWS,r.length));i++) makeRow(r[i]);
   $("qeydBlock").hidden=!$("qeyd").checked; calc();
 }
 function blank(nom){
   const s=state(); s.rows=[]; s.nom=String(nom); s.date=today(); s.dateTxt=isoToTxt(s.date); return s;
 }
-function toast(t){const e=$("toast");e.textContent=t;e.hidden=false;clearTimeout(toast.t);toast.t=setTimeout(()=>e.hidden=true,1800);}
+function toast(t){const e=$("toast");e.textContent=t;e.hidden=false;clearTimeout(toast.t);toast.t=setTimeout(()=>e.hidden=true,t.length>40?5000:1800);}
 
 /* ---- events ---- */
 $("sheet").addEventListener("input",e=>{ if(e.target.id==="nom")$("nomCtl").value=e.target.value; if(e.target.id==="dateTxt"){const m=e.target.value.match(/^(\d{2})\.(\d{2})\.(\d{4})$/); if(m)$("dateCtl").value=`${m[3]}-${m[2]}-${m[1]}`;} calc(); });
@@ -301,15 +317,57 @@ $("sheet").addEventListener("focusin",e=>{
   const t=e.target;
   if(t.matches("#rows input")) setTimeout(()=>{ if(document.activeElement===t) t.select(); },0);
 });
-$("addRow").addEventListener("click",()=>{makeRow();calc();});
 $("newBtn").addEventListener("click",()=>{render(blank($("nom").value));toast("Mallar siyahısı təmizləndi");});
 $("nextBtn").addEventListener("click",()=>{const n=(parseInt($("nom").value,10)||0)+1;render(blank(n));toast("Yeni faktura № "+n);});
 
-$("printBtn").addEventListener("click",()=>{fitPage();window.print();});
+function pdfName(){
+  const n=$("nom").value.trim(), b=$("buyer").value.trim();
+  return (n+" №-li Hesab  Faktura,"+b).replace(/[\\/:*?"<>|]/g," ").trim();
+}
+let oldTitle=document.title;
+window.addEventListener("beforeprint",()=>{oldTitle=document.title; document.title=pdfName();});
+window.addEventListener("afterprint",()=>{document.title=oldTitle;});
+function doPrint(){ if(!(TOTAL>0)){ toast("Ödəniləcək məbləğ 0-dır, faktura çap edilə bilməz"); return; } fitPage(); window.print(); }
+$("printBtn").addEventListener("click",doPrint);
+/* ---- Google Drive-a avtomatik saxlama ---- */
+const DRIVE_URL = "";               // Apps Script veb-tətbiq linki bura yazılır
+const DRIVE_KEY = "mezahiroto-2026"; // Kod.gs-dəki KEY ilə eyni
+function loadScript(src){return new Promise((ok,no)=>{const s=document.createElement("script");s.src=src;s.onload=ok;s.onerror=()=>no(new Error("Kitabxana yüklənmədi"));document.head.appendChild(s);});}
+async function makePdfBase64(){
+  if(!window.html2canvas) await loadScript("https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js");
+  if(!window.jspdf) await loadScript("https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js");
+  const sheet=$("sheet"); const act=document.activeElement; if(act&&act.blur) act.blur();
+  sheet.classList.add("pdfmode"); sheet.style.zoom="";
+  try{
+    const canvas=await html2canvas(sheet,{scale:2,backgroundColor:"#ffffff",useCORS:true,windowWidth:sheet.scrollWidth});
+    const pdf=new jspdf.jsPDF({orientation:"portrait",unit:"mm",format:"a4"});
+    let w=210,h=canvas.height*210/canvas.width,x=0;
+    if(h>297){ w=w*297/h; h=297; x=(210-w)/2; }
+    pdf.addImage(canvas.toDataURL("image/jpeg",0.92),"JPEG",x,0,w,h);
+    return pdf.output("datauristring").split(",")[1];
+  } finally { sheet.classList.remove("pdfmode"); }
+}
+function fileName(){ return ($("nom").value.trim()+" №-li Hesab  Faktura,"+$("buyer").value.trim()).replace(/[\\/:*?"<>|]/g," ").trim(); }
+async function saveToDrive(){
+  if(!(TOTAL>0)){ toast("Ödəniləcək məbləğ 0-dır, faktura saxlanıla bilməz"); return; }
+  if(!DRIVE_URL){ toast("Google Drive hələ qoşulmayıb, adi saxlama açılır"); return doPrint(); }
+  if(!$("buyer").value.trim()){ toast("Əvvəlcə müştərini seçin"); return; }
+  const btn=$("saveBtn"), label=btn.textContent; btn.disabled=true; btn.dataset.busy="1"; btn.textContent="Saxlanılır…";
+  try{
+    const pdf=await makePdfBase64();
+    const res=await fetch(DRIVE_URL,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify({key:DRIVE_KEY,name:fileName(),pdf})});
+    const j=await res.json();
+    if(!j.ok) throw new Error(j.error||"Naməlum xəta");
+    toast("Saxlanıldı: "+j.name);
+  }catch(err){
+    console.error(err); toast("Saxlanılmadı: "+err.message+". İnterneti yoxlayıb yenidən cəhd edin.");
+  }finally{ delete btn.dataset.busy; btn.textContent=label; updateOutputButtons(); }
+}
+$("saveBtn").addEventListener("click",saveToDrive);
 function fitPage(){
   const s=$("sheet"); s.style.zoom=""; s.style.minHeight="0";
   const h=s.scrollHeight; s.style.minHeight="";
-  const max=1100; if(h>max) s.style.zoom=(max/h).toFixed(3);
+  const max=1120; if(h>max) s.style.zoom=(max/h).toFixed(3);
 }
 window.addEventListener("beforeprint",fitPage);
 window.addEventListener("afterprint",()=>{$("sheet").style.zoom="";});
