@@ -36,6 +36,8 @@ body{background:var(--bg);color:var(--fg);font-family:var(--ui);padding:16px}
 .sheet select.un{font:inherit;color:inherit;background:transparent;border:0;width:100%;padding:0;appearance:none;-webkit-appearance:none;text-align:center;text-align-last:center;cursor:pointer}
 .sheet select.un:hover,.sheet select.un:focus{background:transparent;outline:0}
 .sheet input:hover,.sheet input:focus{outline:0;background:transparent}
+#rows td:focus-within{background:#e3eefa;box-shadow:inset 0 0 0 2px #1f5f8b}
+.sheet.pdfmode #rows td{background:transparent!important;box-shadow:none!important}
 .sheet.compact{padding-top:40px}.sheet.compact .title{margin:4px 0 28px}
 .title{text-align:center;font-weight:700;font-size:15.5px;margin:12px 0 44px;display:flex;justify-content:center;gap:10px;align-items:baseline}
 .title input{width:70px;font-weight:700;text-align:left}
@@ -66,7 +68,7 @@ table.items tr.total td{font-weight:700;font-size:14px;padding:2px 3px}
 .toast{position:fixed;left:50%;bottom:calc(18px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--fg);color:var(--bg);padding:8px 14px;border-radius:6px;font-size:13px}
 @media (max-width:600px){.bar{padding:10px}.bar select{min-width:0;width:100%}.bar label.cust{flex:1 1 100%}}
 @page{size:A4;margin:0}
-@media print{body{background:#fff;padding:0}.bar,.hint,.rowtools,.toast{display:none!important}.scroll{overflow:visible;padding:0}.sheet{box-shadow:none;margin:0 auto}.sheet input:hover,.sheet input:focus{background:transparent;outline:0}#rows tr.pempty{display:none}body.zero .scroll{display:none!important}body.zero::before{content:"Ödəniləcək məbləğ 0-dır, faktura çap edilə bilməz";display:block;padding:60px 40px;font:600 18px/1.4 sans-serif;text-align:center}}
+@media print{body{background:#fff;padding:0}.bar,.hint,.rowtools,.toast{display:none!important}.scroll{overflow:visible;padding:0}.sheet{box-shadow:none;margin:0 auto}.sheet input:hover,.sheet input:focus{background:transparent;outline:0}#rows tr.pempty{display:none}#rows td{background:transparent!important;box-shadow:none!important}body.zero .scroll{display:none!important}body.zero::before{content:"Ödəniləcək məbləğ 0-dır, faktura çap edilə bilməz";display:block;padding:60px 40px;font:600 18px/1.4 sans-serif;text-align:center}}
 .sheet.pdfmode #rows tr.pempty{display:none}
 .sheet.pdfmode input,.sheet.pdfmode select{background:transparent!important;outline:0!important}
 .sheet.pdfmode{box-shadow:none}
@@ -312,9 +314,43 @@ $("sheet").addEventListener("keydown",e=>{
   const t=e.target;
   if(t.matches("select.un")&&(e.key==="Delete"||e.key==="Backspace")){e.preventDefault();t.value="";calc();}
 });
+/* Enter ilə növbəti xanaya keçid: mal → ölçü vahidi → miqdar → qiymət → növbəti malın adı */
+function nextCell(t){
+  const tr=t.closest("tr"); calc();
+  let next=null;
+  if(t.matches(".nm")) next=tr.querySelector(".un");
+  else if(t.matches(".un")) next=tr.querySelector(".qt");
+  else if(t.matches(".qt")) next=tr.querySelector(".pr");
+  else if(t.matches(".pr")){ const nr=tr.nextElementSibling; next=nr&&nr.querySelector(".nm"); }
+  if(next&&!next.disabled){ next.focus(); if(next.select) next.select(); return true; }
+  return false;
+}
+$("rows").addEventListener("keydown",e=>{
+  const t=e.target;
+  if(e.key==="Enter" && t.matches(".nm,.un,.qt,.pr")){ e.preventDefault(); if(t.value.trim()) nextCell(t); }
+});
+let unByMouse=false;
+$("rows").addEventListener("pointerdown",e=>{ unByMouse=e.target.matches(".un"); });
+$("rows").addEventListener("change",e=>{
+  if(e.target.matches(".un") && unByMouse && e.target.value){ unByMouse=false; nextCell(e.target); }
+});
+$("rows").addEventListener("mouseup",e=>{ const t=e.target; if(t.dataset&&t.dataset.jf){ e.preventDefault(); delete t.dataset.jf; } });
+/* Miqdar və qiymətə yalnız rəqəm (və bir onluq ayırıcı: vergül və ya nöqtə) */
+function cleanNumber(v,dec){
+  v=v.replace(/[^0-9.,]/g,"");
+  const i=v.search(/[.,]/);
+  if(i>=0) v=v.slice(0,i+1)+v.slice(i+1).replace(/[.,]/g,"").slice(0,dec);
+  if(/^[.,]/.test(v)) v="0"+v;
+  return v;
+}
+$("rows").addEventListener("input",e=>{
+  const t=e.target; if(!t.matches(".qt,.pr")) return;
+  const c=cleanNumber(t.value,t.matches(".pr")?2:3);
+  if(c!==t.value){ const pos=Math.max(0,(t.selectionStart||0)-(t.value.length-c.length)); t.value=c; try{t.setSelectionRange(pos,pos);}catch(_){} }
+});
 $("sheet").addEventListener("focusin",e=>{
   const t=e.target;
-  if(t.matches("#rows input")) setTimeout(()=>{ if(document.activeElement===t) t.select(); },0);
+  if(t.matches("#rows input")&&t.value){ t.select(); t.dataset.jf="1"; }
 });
 $("newBtn").addEventListener("click",()=>{render(blank($("nom").value));toast("Mallar siyahısı təmizləndi");});
 $("nextBtn").addEventListener("click",()=>{const n=(parseInt($("nom").value,10)||0)+1;render(blank(n));toast("Yeni faktura № "+n);});
