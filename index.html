@@ -7,6 +7,7 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gelasio:ital,wght@0,400;0,600;0,700;1,400&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
 <style>
 *{box-sizing:border-box}
+[hidden]{display:none!important}
 /* Layout: control bar on top, the invoice as an A4 sheet below, edited in place */
 :root{
   --bg:#e9ebee; --fg:#1d2430; --muted:#5b6574; --panel:#ffffff; --line:#c9ced6; --accent:#1f5f8b;
@@ -67,11 +68,39 @@ table.items tr.total td{font-weight:700;font-size:14px;padding:2px 3px}
 .rowtools{display:flex;gap:8px;justify-content:flex-end;max-width:794px;margin:8px auto 0}
 .toast{position:fixed;left:50%;bottom:calc(18px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--fg);color:var(--bg);padding:8px 14px;border-radius:6px;font-size:13px}
 @media (max-width:600px){.bar{padding:10px}.bar select{min-width:0;width:100%}.bar label.cust{flex:1 1 100%}}
+/* Protokol vərəqi */
+.tabs{display:flex;gap:4px;max-width:794px;margin:0 auto 10px}
+.tabs button{font:inherit;font-size:13px;font-weight:600;border:1px solid var(--line);background:var(--panel);color:var(--muted);border-radius:6px;padding:7px 14px;cursor:pointer}
+.tabs button[aria-selected="true"]{background:var(--accent);border-color:var(--accent);color:#fff}
+.psheet{font-size:16px;padding:96px 40px 30px}
+.psheet .ptitle{text-align:center;font-weight:700;margin:0 0 22px}
+.psheet .pcity{display:flex;justify-content:space-between;align-items:flex-end;font-weight:700;margin-bottom:22px}
+.psheet .pcity span:last-child{padding-top:14px}
+.psheet .pintro{margin:0}
+.psheet .ptext{margin:0 0 30px;text-align:justify;line-height:1.25}
+.psheet table{width:100%;border-collapse:collapse;table-layout:fixed}
+.psheet th{background:var(--head);border:1px solid #000;font-weight:700;line-height:1.1;height:49px;padding:0 2px}
+.psheet td{border:1px solid #000;height:24px;padding:0 3px;text-align:center}
+.psheet td.l{text-align:left}
+.psheet tr.ptot td{height:33px;font-weight:700}
+.psheet .pnotes{margin:18px 0 0;text-align:justify;line-height:2.05}
+.psheet .psign{display:grid;grid-template-columns:62% 38%;margin-top:64px;font-weight:700;line-height:1.25;align-items:end}
+.psheet .psign .who{display:flex;flex-direction:column;gap:10px}
+.psheet .psign .nm{display:flex;align-items:flex-end;gap:22px;white-space:nowrap}
+.psheet .psign .ln{flex:1;border-bottom:1px solid #000;height:1px;margin-bottom:4px;max-width:200px}
+.psheet .psign .who:first-child{padding-right:60px}
+.psheet .psign .right .nm .ln{max-width:none}
+.psheet .pmy{position:relative;height:24px;margin-top:40px;font-weight:700}
+.psheet .pmy span{position:absolute;top:0}
+.psheet .pmy span:first-child{left:44%}
+.psheet .pmy span:last-child{left:86%}
 @page{size:A4;margin:0}
-@media print{body{background:#fff;padding:0}.bar,.hint,.rowtools,.toast{display:none!important}.scroll{overflow:visible;padding:0}.sheet{box-shadow:none;margin:0 auto}.sheet input:hover,.sheet input:focus{background:transparent;outline:0}#rows tr.pempty{display:none}#rows td{background:transparent!important;box-shadow:none!important}body.zero .scroll{display:none!important}body.zero::before{content:"Ödəniləcək məbləğ 0-dır, faktura çap edilə bilməz";display:block;padding:60px 40px;font:600 18px/1.4 sans-serif;text-align:center}}
+@media print{html,body{margin:0}body{background:#fff;padding:0}.bar,.hint,.rowtools,.toast,.tabs{display:none!important}.scroll{overflow:visible;padding:0}.sheet{box-shadow:none;margin:0 auto}.sheet input:hover,.sheet input:focus{background:transparent;outline:0}#rows tr.pempty{display:none}#rows td{background:transparent!important;box-shadow:none!important}body.zero .scroll{display:none!important}body.zero::before{content:"Ödəniləcək məbləğ 0-dır, faktura çap edilə bilməz";display:block;padding:60px 40px;font:600 18px/1.4 sans-serif;text-align:center}}
 .sheet.pdfmode #rows tr.pempty{display:none}
 .sheet.pdfmode input,.sheet.pdfmode select{background:transparent!important;outline:0!important}
 .sheet.pdfmode{box-shadow:none}
+body.zero::before{content:none}
+@media print{body.zero::before{content:"Ödəniləcək məbləğ 0-dır, sənəd çap edilə bilməz"}}
 </style>
 </head>
 <body>
@@ -91,6 +120,10 @@ table.items tr.total td{font-weight:700;font-size:14px;padding:2px 3px}
   <button id="nextBtn" class="pri" type="button">Növbəti № ilə yeni</button>
   <button id="saveBtn" class="pri" type="button">Yadda saxla (PDF)</button>
   <button id="printBtn" type="button">Çap et</button>
+</div>
+<div class="tabs" role="tablist">
+  <button id="tabF" type="button" role="tab" aria-selected="true">Hesab Faktura</button>
+  <button id="tabP" type="button" role="tab" aria-selected="false">Protokol</button>
 </div>
 <p class="hint">Fakturanın üzərindəki istənilən sahəyə klikləyib yaza bilərsiniz. Məbləğ, cəm və sözlə yazılış avtomatik hesablanır.</p>
 
@@ -147,6 +180,24 @@ table.items tr.total td{font-weight:700;font-size:14px;padding:2px 3px}
     <div>E-mail</div><div><a href="mailto:fiat_mezahiroto@mail.ru">fiat_mezahiroto@mail.ru</a></div>
   </div>
 </div>
+<div class="sheet psheet" id="sheetP" hidden>
+  <div class="ptitle">QİYMƏT RAZILAŞMASI PROTOKOLU</div>
+  <div class="pcity"><span>Bakı şəhəri</span><span id="pDate"></span></div>
+  <p class="pintro">Biz aşağıda imza edənlər:</p>
+  <p class="ptext" id="pText"></p>
+  <table>
+    <colgroup><col style="width:7.14%"><col style="width:14.44%"><col style="width:16.33%"><col style="width:22.74%"><col style="width:8.16%"><col style="width:9.91%"><col style="width:10.21%"><col style="width:11.07%"></colgroup>
+    <thead><tr><th>№</th><th colspan="3">Malın adı</th><th>Ölçü vahidi</th><th>Miqdarı</th><th>Qiymət (AZN)</th><th>Məbləğ (AZN)</th></tr></thead>
+    <tbody id="pRows"></tbody>
+    <tbody><tr class="ptot"><td colspan="2" style="text-align:center">Ümumi məbləğ</td><td id="pSum" style="text-align:right;border-right:0"></td><td colspan="5" class="l" id="pTotal" style="border-left:0"></td></tr></tbody>
+  </table>
+  <div class="pnotes">1.Qiymət razılaşması protokolu, hesablaşma üçün əsas sayılır və biri Satıcıda, digəri isə Alıcıda saxlanılmaqla, iki nüsxədə tərtib edilir və imzalandığı gündən qüvvəyə minir<br>2.Təqdim edilmiş malların dəyəri mal “Alıcı”ya&nbsp; <b>E-qaimə və ya Hesab Faktura göndərildikdən</b> sonra 15 (on beş)&nbsp; günü ərzində “Alıcı” tərəfindən&nbsp; “Satıcı”ya ödəniləcəkdir.</div>
+  <div class="psign">
+    <div class="who"><span>Fiziki şəxs</span><span class="nm"><span id="pSeller"></span><span class="ln"></span></span></div>
+    <div class="who right" id="pBuyerBox"><span id="pDirTitle"></span><span class="nm"><span id="pDirName"></span><span class="ln"></span></span></div>
+  </div>
+  <div class="pmy"><span>M.Y</span><span>M.Y</span></div>
+</div>
 </div>
 <div class="toast" id="toast" hidden></div>
 
@@ -195,13 +246,13 @@ const CUSTOMERS=[
 ["Azer Atribut MMC","1005867471","04/25","27.01.2025"],
 ["TS Group MMC","3102575941","05/25","03.04.2025"],
 ["Procar Service","1008998361","06/25","15.05.2025"],
-["İkizler Klima MMC","1901982861","07/25","26.12.2025"],
+["İkizler Klima MMC","1901982861","07/25","26.12.2025","Direktor:.\nAli Badur        ___________________"],
 ["NH GROUP MMC","1602425311","08/25","29.12.2025"],
 ["BESTING MMC","1305774251","09/25","29.12.2025"],
 ["BCC Group QSC","1300435061","01/26","10.02.2026"],
 ["AGROMACH MMC","1007503591","02/26","18.02.2026"],
 ["Fiziki şəxs Məmmədov Elvin Murad oğlu","5901365242","04/26","12.06.2026"],
-["Avtoservis 555 MMC","2000006461","06/26","30.09.2026"]
+["Avtoservis 555 MMC","2000006461","06/26","30.09.2026","Direktor:\nO.A. Kərimov __________________"]
 ];
 const $=id=>document.getElementById(id);
 const ROWS=12, MAXROWS=20;
@@ -261,7 +312,7 @@ function calc(){
   if(rs.length>want){ while($("rows").rows.length>want && !$("rows").lastElementChild.querySelector(".nm").value.trim()) $("rows").lastElementChild.remove(); return calc(); }
   $("sheet").classList.toggle("compact", i>12);
   total=Math.round(total*100)/100;
-  TOTAL=total; updateOutputButtons();
+  TOTAL=total; updateOutputButtons(); renderProtokol();
   $("totWords").innerHTML=`<b>${fmt(total)}</b>&nbsp;manat (${words(total)})`;
   save();
 }
@@ -288,7 +339,7 @@ function state(){
   for(const tr of $("rows").rows) s.rows.push({nm:tr.querySelector(".nm").value,un:tr.querySelector(".un").value,qt:tr.querySelector(".qt").value,pr:tr.querySelector(".pr").value});
   return s;
 }
-function save(){try{localStorage.setItem("hf_mezahir",JSON.stringify(state()));}catch(e){}}
+function save(){try{localStorage.setItem("hf_mezahir",JSON.stringify(state()));}catch(e){} if(typeof renderProtokol==="function") renderProtokol();}
 function load(){try{return JSON.parse(localStorage.getItem("hf_mezahir")||"null");}catch(e){return null;}}
 const FIXED=["seller","sellerTin","cur","b1","b2","b3","b4","b5","b6"];
 function render(s){
@@ -355,7 +406,42 @@ $("sheet").addEventListener("focusin",e=>{
 $("newBtn").addEventListener("click",()=>{render(blank($("nom").value));toast("Mallar siyahısı təmizləndi");});
 $("nextBtn").addEventListener("click",()=>{const n=(parseInt($("nom").value,10)||0)+1;render(blank(n));toast("Yeni faktura № "+n);});
 
+/* ---- Protokol ---- */
+const AYLAR=["Yanvar","Fevral","Mart","Aprel","May","İyun","İyul","Avqust","Sentyabr","Oktyabr","Noyabr","Dekabr"];
+const SUF={1:"ci",2:"ci",3:"cü",4:"cü",5:"ci",6:"cı",7:"ci",8:"ci",9:"cu"};
+const SUF0={0:"ci",1:"cu",2:"ci",3:"cu",4:"cı",5:"ci",6:"cı",7:"ci",8:"ci",9:"cu"};
+function yearSuffix(dmy){ const y=String(dmy||"").trim().slice(-2); if(!/^\d\d$/.test(y)) return ""; return y[1]!=="0"?SUF[y[1]]:SUF0[y[0]]; }
+function longDate(iso){ if(!iso) return ""; const [y,m,d]=iso.split("-"); return parseInt(d,10)+" "+AYLAR[parseInt(m,10)-1]+" "+y; }
+function renderProtokol(){
+  if(!$("sheetP")) return;
+  $("pDate").textContent=longDate($("dateCtl").value);
+  const buyer=$("buyer").value.trim(), cd=$("contractDate").value.trim();
+  $("pText").textContent=buyer?("“Satıcı” adlandırılacaq, "+$("seller").value+" (VÖEN: "+$("sellerTin").value+") və “Alıcı” adlandırılacaq "+buyer+"  (VÖEN:"+$("buyerTin").value+") "+cd+" "+yearSuffix(cd)+" il tarixli "+$("contract").value+" saylı Alqı-Satqı Müqaviləsi əsasında aşağıdda qeyd olunan Malların adı,miqdarı,ölçü vahidi və qiyməti barədə razılığa gəldik:"):"";
+  const body=$("pRows"); body.innerHTML="";
+  let k=0;
+  for(const tr of $("rows").rows){
+    if(tr.classList.contains("pempty")) continue;
+    const row=document.createElement("tr"); k++;
+    const cells=[tr.querySelector(".n").textContent,tr.querySelector(".nm").value,tr.querySelector(".un").value,tr.querySelector(".qt").value,tr.querySelector(".pr").value,tr.querySelector(".am").textContent];
+    cells.forEach((v,i)=>{const td=document.createElement("td"); if(i===1){ td.className="l"; td.colSpan=3; } td.textContent=v; row.appendChild(td);});
+    body.appendChild(row);
+  }
+  $("pSum").textContent=fmt(TOTAL); $("pTotal").textContent="manat ("+words(TOTAL)+")";
+  $("pSeller").textContent=$("seller").value;
+  const c=CUSTOMERS[$("cust").value], dir=(c&&c[4])||"";
+  const parts=dir.split("\n"), title=(parts[0]||"").replace(/[.:]+$/,"")+(dir?":":""), name=(parts[1]||"").replace(/_+/g,"").trim();
+  $("pDirTitle").textContent=dir?title:""; $("pDirName").textContent=name; $("pBuyerBox").style.visibility=dir?"visible":"hidden";
+}
+let TAB="F";
+function activeSheet(){ return TAB==="P"?$("sheetP"):$("sheet"); }
+function setTab(t){
+  TAB=t; $("tabF").setAttribute("aria-selected",t==="F"); $("tabP").setAttribute("aria-selected",t==="P");
+  $("sheet").hidden=t!=="F"; $("sheetP").hidden=t!=="P"; $("rows")&&renderProtokol();
+}
+$("tabF").addEventListener("click",()=>setTab("F"));
+$("tabP").addEventListener("click",()=>setTab("P"));
 function pdfName(){
+  if(TAB==="P"){ const d=$("dateCtl").value.split("-"); return ($("buyer").value.trim()+" "+(d.length===3?d[2]+"."+d[1]+"."+d[0]:"")).replace(/[\\/:*?"<>|]/g," ").trim(); }
   const n=$("nom").value.trim(), b=$("buyer").value.trim();
   return (n+" №-li Hesab  Faktura,"+b).replace(/[\\/:*?"<>|]/g," ").trim();
 }
@@ -371,7 +457,7 @@ function loadScript(src){return new Promise((ok,no)=>{const s=document.createEle
 async function makePdfBase64(){
   if(!window.html2canvas) await loadScript("https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js");
   if(!window.jspdf) await loadScript("https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js");
-  const sheet=$("sheet"); const act=document.activeElement; if(act&&act.blur) act.blur();
+  const sheet=activeSheet(); const act=document.activeElement; if(act&&act.blur) act.blur();
   sheet.classList.add("pdfmode"); sheet.style.zoom="";
   try{
     const canvas=await html2canvas(sheet,{scale:2,backgroundColor:"#ffffff",useCORS:true,windowWidth:sheet.scrollWidth});
@@ -382,7 +468,7 @@ async function makePdfBase64(){
     return pdf.output("datauristring").split(",")[1];
   } finally { sheet.classList.remove("pdfmode"); }
 }
-function fileName(){ return ($("nom").value.trim()+" №-li Hesab  Faktura,"+$("buyer").value.trim()).replace(/[\\/:*?"<>|]/g," ").trim(); }
+function fileName(){ if(TAB==="P") return pdfName(); return ($("nom").value.trim()+" №-li Hesab  Faktura,"+$("buyer").value.trim()).replace(/[\\/:*?"<>|]/g," ").trim(); }
 async function saveToDrive(){
   if(!(TOTAL>0)){ toast("Ödəniləcək məbləğ 0-dır, faktura saxlanıla bilməz"); return; }
   if(!DRIVE_URL){ toast("Google Drive hələ qoşulmayıb, adi saxlama açılır"); return doPrint(); }
@@ -400,12 +486,12 @@ async function saveToDrive(){
 }
 $("saveBtn").addEventListener("click",saveToDrive);
 function fitPage(){
-  const s=$("sheet"); s.style.zoom=""; s.style.minHeight="0";
+  const s=activeSheet(); s.style.zoom=""; s.style.minHeight="0";
   const h=s.scrollHeight; s.style.minHeight="";
   const max=1120; if(h>max) s.style.zoom=(max/h).toFixed(3);
 }
 window.addEventListener("beforeprint",fitPage);
-window.addEventListener("afterprint",()=>{$("sheet").style.zoom="";});
+window.addEventListener("afterprint",()=>{$("sheet").style.zoom="";$("sheetP").style.zoom="";});
 /* ---- init ---- */
 fillCustomers();
 document.querySelectorAll("#sheet input").forEach(el=>{ if(el.id && el.id!=="receiver"){ el.readOnly=true; el.tabIndex=-1; } });
