@@ -30,6 +30,7 @@ body{background:var(--bg);color:var(--fg);font-family:var(--ui);padding:16px}
 .sheet{width:794px;min-height:1123px;margin:0 auto;background:var(--paper);color:var(--ink);font-family:var(--doc);font-size:14px;padding:70px 34px 30px;box-shadow:0 2px 14px rgba(0,0,0,.18);box-sizing:border-box}
 .sheet input{font:inherit;color:inherit;background:transparent;border:0;padding:0 2px;width:100%;box-sizing:border-box}
 .sheet input:hover{background:var(--edit)}
+.sheet input[readonly]{pointer-events:none;cursor:default;background:transparent!important;outline:0!important}
 .sheet select.un:disabled{cursor:not-allowed;background:transparent;outline:0}
 .sheet input:disabled{cursor:not-allowed;background:transparent;color:inherit}
 .sheet select.un{font:inherit;color:inherit;background:transparent;border:0;width:100%;padding:0;appearance:none;-webkit-appearance:none;text-align:center;text-align-last:center;cursor:pointer}
@@ -267,8 +268,9 @@ function state(){
 }
 function save(){try{localStorage.setItem("hf_mezahir",JSON.stringify(state()));}catch(e){}}
 function load(){try{return JSON.parse(localStorage.getItem("hf_mezahir")||"null");}catch(e){return null;}}
+const FIXED=["seller","sellerTin","cur","b1","b2","b3","b4","b5","b6"];
 function render(s){
-  FIELDS.forEach(f=>{if(s[f]!==undefined)$(f).value=s[f];});
+  FIELDS.forEach(f=>{if(s[f]!==undefined&&!FIXED.includes(f))$(f).value=s[f];});
   $("cust").value=s.cust||""; $("dateCtl").value=s.date||""; $("qeyd").checked=s.qeyd!==false;
   $("nomCtl").value=s.nom||"";
   $("rows").innerHTML=""; const r=s.rows||[];
@@ -301,6 +303,7 @@ $("nextBtn").addEventListener("click",()=>{const n=(parseInt($("nom").value,10)|
 $("printBtn").addEventListener("click",()=>window.print());
 /* ---- init ---- */
 fillCustomers();
+document.querySelectorAll("#sheet input").forEach(el=>{ if(el.id && el.id!=="receiver"){ el.readOnly=true; el.tabIndex=-1; } });
 const saved=load();
 if(saved) render(saved);
 else{
