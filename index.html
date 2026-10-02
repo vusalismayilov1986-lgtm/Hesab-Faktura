@@ -30,13 +30,12 @@ body{background:var(--bg);color:var(--fg);font-family:var(--ui);padding:16px}
 .scroll{overflow-x:auto;padding-bottom:8px}
 .sheet{width:794px;min-height:1123px;margin:0 auto;background:var(--paper);color:var(--ink);font-family:var(--doc);font-size:14px;padding:70px 34px 30px;box-shadow:0 2px 14px rgba(0,0,0,.18);box-sizing:border-box}
 .sheet input{font:inherit;color:inherit;background:transparent;border:0;padding:0 2px;width:100%;box-sizing:border-box}
-.sheet input:hover{background:var(--edit)}
 .sheet input[readonly]{pointer-events:none;cursor:default;background:transparent!important;outline:0!important}
 .sheet select.un:disabled{cursor:not-allowed;background:transparent;outline:0}
 .sheet input:disabled{cursor:not-allowed;background:transparent;color:inherit}
 .sheet select.un{font:inherit;color:inherit;background:transparent;border:0;width:100%;padding:0;appearance:none;-webkit-appearance:none;text-align:center;text-align-last:center;cursor:pointer}
-.sheet select.un:hover,.sheet select.un:focus{background:var(--edit);outline:1px dashed #8a8a8a}
-.sheet input:focus{outline:1px dashed #8a8a8a;background:var(--edit)}
+.sheet select.un:hover,.sheet select.un:focus{background:transparent;outline:0}
+.sheet input:hover,.sheet input:focus{outline:0;background:transparent}
 .sheet.compact{padding-top:40px}.sheet.compact .title{margin:4px 0 28px}
 .title{text-align:center;font-weight:700;font-size:15.5px;margin:12px 0 44px;display:flex;justify-content:center;gap:10px;align-items:baseline}
 .title input{width:70px;font-weight:700;text-align:left}
