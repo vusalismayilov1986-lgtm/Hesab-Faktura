@@ -30,6 +30,7 @@ body{background:var(--bg);color:var(--fg);font-family:var(--ui);padding:16px}
 .sheet{width:794px;min-height:1123px;margin:0 auto;background:var(--paper);color:var(--ink);font-family:var(--doc);font-size:14px;padding:70px 34px 30px;box-shadow:0 2px 14px rgba(0,0,0,.18);box-sizing:border-box}
 .sheet input{font:inherit;color:inherit;background:transparent;border:0;padding:0 2px;width:100%;box-sizing:border-box}
 .sheet input:hover{background:var(--edit)}
+.sheet select.un:disabled{cursor:not-allowed;background:transparent;outline:0}
 .sheet input:disabled{cursor:not-allowed;background:transparent;color:inherit}
 .sheet select.un{font:inherit;color:inherit;background:transparent;border:0;width:100%;padding:0;appearance:none;-webkit-appearance:none;text-align:center;text-align-last:center;cursor:pointer}
 .sheet select.un:hover,.sheet select.un:focus{background:var(--edit);outline:1px dashed #8a8a8a}
@@ -223,6 +224,8 @@ function calc(){
   for(const tr of $("rows").rows){
     const nm=tr.querySelector(".nm").value.trim(), un=tr.querySelector(".un");
     const qt=tr.querySelector(".qt"), pr=tr.querySelector(".pr");
+    un.disabled=!nm; if(un.disabled) un.value="";
+    un.title=un.disabled?"Əvvəlcə malın adını yazın":"";
     qt.disabled=!un.value; if(qt.disabled) qt.value="";
     qt.title=qt.disabled?"Əvvəlcə ölçü vahidini seçin":"";
     pr.disabled=!qt.value.trim(); if(pr.disabled) pr.value="";
@@ -233,6 +236,8 @@ function calc(){
     tr.querySelector(".am").textContent=isNaN(a)?"":fmt(Math.round(a*100)/100);
     if(!isNaN(a)) total+=a;
   }
+  const rs=$("rows").rows, last=rs[rs.length-1];
+  if(last && last.querySelector(".nm").value.trim()){ makeRow(); return calc(); }
   total=Math.round(total*100)/100;
   $("totWords").innerHTML=`<b>${fmt(total)}</b>&nbsp;manat (${words(total)})`;
   save();
@@ -281,6 +286,14 @@ $("cust").addEventListener("change",applyCustomer);
 $("nomCtl").addEventListener("input",()=>{$("nom").value=$("nomCtl").value;save();});
 $("dateCtl").addEventListener("input",()=>{$("dateTxt").value=isoToTxt($("dateCtl").value);save();});
 $("qeyd").addEventListener("change",()=>{$("qeydBlock").hidden=!$("qeyd").checked;save();});
+$("sheet").addEventListener("keydown",e=>{
+  const t=e.target;
+  if(t.matches("select.un")&&(e.key==="Delete"||e.key==="Backspace")){e.preventDefault();t.value="";calc();}
+});
+$("sheet").addEventListener("focusin",e=>{
+  const t=e.target;
+  if(t.matches("#rows input")) setTimeout(()=>{ if(document.activeElement===t) t.select(); },0);
+});
 $("addRow").addEventListener("click",()=>{makeRow();calc();});
 $("newBtn").addEventListener("click",()=>{render(blank($("nom").value));toast("Mallar siyahısı təmizləndi");});
 $("nextBtn").addEventListener("click",()=>{const n=(parseInt($("nom").value,10)||0)+1;render(blank(n));toast("Yeni faktura № "+n);});
