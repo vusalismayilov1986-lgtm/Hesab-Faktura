@@ -30,6 +30,7 @@ body{background:var(--bg);color:var(--fg);font-family:var(--ui);padding:16px}
 .sheet{width:794px;min-height:1123px;margin:0 auto;background:var(--paper);color:var(--ink);font-family:var(--doc);font-size:14px;padding:70px 34px 30px;box-shadow:0 2px 14px rgba(0,0,0,.18);box-sizing:border-box}
 .sheet input{font:inherit;color:inherit;background:transparent;border:0;padding:0 2px;width:100%;box-sizing:border-box}
 .sheet input:hover{background:var(--edit)}
+.sheet input:disabled{cursor:not-allowed;background:transparent;color:inherit}
 .sheet select.un{font:inherit;color:inherit;background:transparent;border:0;width:100%;padding:0;appearance:none;-webkit-appearance:none;text-align:center;text-align-last:center;cursor:pointer}
 .sheet select.un:hover,.sheet select.un:focus{background:var(--edit);outline:1px dashed #8a8a8a}
 .sheet input:focus{outline:1px dashed #8a8a8a;background:var(--edit)}
@@ -221,8 +222,13 @@ function calc(){
   let total=0,i=0;
   for(const tr of $("rows").rows){
     const nm=tr.querySelector(".nm").value.trim(), un=tr.querySelector(".un");
+    const qt=tr.querySelector(".qt"), pr=tr.querySelector(".pr");
+    qt.disabled=!un.value; if(qt.disabled) qt.value="";
+    qt.title=qt.disabled?"Əvvəlcə ölçü vahidini seçin":"";
+    pr.disabled=!qt.value.trim(); if(pr.disabled) pr.value="";
+    pr.title=pr.disabled?"Əvvəlcə miqdarı yazın":"";
     const q=num(tr.querySelector(".qt").value), p=num(tr.querySelector(".pr").value);
-    if(nm){i++; tr.querySelector(".n").textContent=i; if(!un.value&&!un.dataset.t){un.value="ədəd";un.dataset.t=1;}} else {tr.querySelector(".n").textContent="";}
+    if(nm){i++; tr.querySelector(".n").textContent=i;} else {tr.querySelector(".n").textContent="";}
     const a=(!isNaN(p)&&p!==0)?(isNaN(q)?0:q)*p:NaN;
     tr.querySelector(".am").textContent=isNaN(a)?"":fmt(Math.round(a*100)/100);
     if(!isNaN(a)) total+=a;
