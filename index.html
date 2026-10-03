@@ -195,6 +195,9 @@ body.locked #login{display:flex}
 #login .wait{display:none;font-family:var(--ui);color:var(--muted)}
 #login.busy .wait{display:block}
 .tabs{align-items:center;flex-wrap:wrap}
+.tabs .tabchk{display:flex;align-items:center;padding:0 6px 0 2px;cursor:pointer}
+.tabs .tabchk input{width:17px;height:17px;margin:0;cursor:pointer;accent-color:var(--accent)}
+body.tabK .tabs .tabchk{visibility:hidden}
 .tabs .me{margin-left:auto;display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted);font-family:var(--ui)}
 .tabs .me b{color:var(--fg);font-weight:600}
 .tabs .me button{font-weight:500;padding:5px 10px}
@@ -226,6 +229,11 @@ body.noakt>.hint{display:none}
 .ctable td:first-child input{min-width:230px}
 .ctable td:nth-child(6) input{min-width:200px}
 .spass{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px 14px;align-items:end}
+#printBox{display:none}
+#printBox.measure{display:block;position:absolute;left:-10000px;top:0}
+#printBox .pcopy{box-shadow:none;margin:0 auto;break-after:page;page-break-after:always}
+#printBox .pcopy:last-child{break-after:auto;page-break-after:auto}
+@media print{body.printing .scroll{display:none!important}body.printing #printBox{display:block}}
 @page{size:A4;margin:0}
 @media print{html,body{margin:0}body{background:#fff;padding:0}.bar,.hint,.rowtools,.toast,.tabs,.kpanel{display:none!important}.scroll{overflow:visible;padding:0}.sheet{box-shadow:none;margin:0 auto}.sheet input:hover,.sheet input:focus{background:transparent;outline:0}#rows tr.pempty{display:none}#rows td{background:transparent!important;box-shadow:none!important}body.zero .scroll{display:none!important}body.zero::before{content:"Ödəniləcək məbləğ 0-dır, faktura çap edilə bilməz";display:block;padding:60px 40px;font:600 18px/1.4 sans-serif;text-align:center}}
 .sheet.pdfmode #rows tr.pempty{display:none}
@@ -264,8 +272,7 @@ body.zero::before{content:none}
     <input id="dateCtl" type="date">
   </label>
   <label class="chk"><input id="qeyd" type="checkbox" checked> Təhvil qeydi</label>
-  <button id="newBtn" type="button">Yeni faktura</button>
-  <button id="nextBtn" class="pri" type="button">Növbəti № ilə yeni</button>
+  <button id="newBtn" class="pri" type="button">Yeni faktura</button>
   <button id="saveBtn" class="pri" type="button">Yadda saxla (PDF)</button>
   <button id="printBtn" type="button">Çap et</button>
 </div>
@@ -273,6 +280,7 @@ body.zero::before{content:none}
   <button id="tabA" type="button" role="tab" aria-selected="true">Akt</button>
   <button id="tabF" type="button" role="tab" aria-selected="false">Hesab Faktura</button>
   <button id="tabP" type="button" role="tab" aria-selected="false">Protokol</button>
+  <label class="tabchk" title="Quş işarəsi olanda protokol da yadda saxlanılır və çap olunur"><input id="protChk" type="checkbox" aria-label="Protokolu da saxla və çap et"></label>
   <button id="tabK" type="button" role="tab" aria-selected="false">Köçürmələr</button>
   <button id="tabS" type="button" role="tab" aria-selected="false">Ayarlar</button>
   <span class="me"><span id="sync" role="status"></span><b id="whoName"></b><button id="logoutBtn" type="button">Çıxış</button></span>
@@ -451,6 +459,7 @@ body.zero::before{content:none}
     <button id="pBtn" type="button">Şifrəni dəyiş</button>
   </div>
 </div>
+<div id="printBox" aria-hidden="true"></div>
 <div class="toast" id="toast" hidden></div>
 
 <script>
@@ -558,7 +567,7 @@ function today(){const d=new Date();return d.getFullYear()+"-"+String(d.getMonth
 /* ---- state ---- */
 const FIELDS=["nom","dateTxt","seller","sellerTin","contract","buyer","contractDate","buyerTin","cur","receiver","b1","b2","b3","b4","b5","b6"];
 function state(){
-  const s={cust:$("cust").value,date:$("dateCtl").value,qeyd:$("qeyd").checked,rows:[]};
+  const s={cust:$("cust").value,date:$("dateCtl").value,qeyd:$("qeyd").checked,prot:$("protChk").checked,rows:[]};
   FIELDS.forEach(f=>s[f]=$(f).value);
   for(const tr of $("rows").rows) s.rows.push({nm:tr.querySelector(".nm").value,un:tr.querySelector(".un").value,qt:tr.querySelector(".qt").value,pr:tr.querySelector(".pr").value});
   return s;
@@ -568,7 +577,7 @@ function load(){try{return JSON.parse(localStorage.getItem(LSP+"hf")||"null");}c
 const FIXED=["seller","sellerTin","cur","b1","b2","b3","b4","b5","b6"];
 function render(s){
   FIELDS.forEach(f=>{if(s[f]!==undefined&&!FIXED.includes(f))$(f).value=s[f];});
-  $("cust").value=s.cust||""; $("dateCtl").value=s.date||""; $("qeyd").checked=s.qeyd!==false;
+  $("cust").value=s.cust||""; $("dateCtl").value=s.date||""; $("qeyd").checked=s.qeyd!==false; $("protChk").checked=s.prot===true;
   $("nomCtl").value=s.nom||"";
   $("rows").innerHTML=""; const r=s.rows||[];
   for(let i=0;i<Math.min(MAXROWS,Math.max(ROWS,r.length));i++) makeRow(r[i]);
@@ -587,6 +596,7 @@ $("nomCtl").addEventListener("input",()=>{$("nom").value=$("nomCtl").value;save(
 $("nomCtl").addEventListener("change",()=>{ const p=nomProblem(); if(p&&parseInt($("nomCtl").value,10)>0){ const nx=nextNumber($("dateCtl").value.slice(0,4)); nomWarn(p); $("nomCtl").value=$("nom").value=String(nx); save(); } });
 $("dateCtl").addEventListener("input",()=>{$("dateTxt").value=isoToTxt($("dateCtl").value);save();});
 $("qeyd").addEventListener("change",()=>{$("qeydBlock").hidden=!$("qeyd").checked;save();});
+$("protChk").addEventListener("change",()=>save());
 $("sheet").addEventListener("keydown",e=>{
   const t=e.target;
   if(t.matches("select.un")&&(e.key==="Delete"||e.key==="Backspace")){e.preventDefault();t.value="";calc();}
@@ -659,7 +669,8 @@ $("sheet").addEventListener("focusin",e=>{
   const t=e.target;
   if(t.matches("#rows input")&&t.value&&!t.readOnly){ t.select(); t.dataset.jf="1"; }
 });
-$("newBtn").addEventListener("click",()=>{render(blank($("nom").value));aClear();toast("Mallar siyahısı təmizləndi");});
+/* Yeni faktura: həmişə növbəti ardıcıl nömrə ilə (saxlanmamış faktura varsa onun nömrəsi ilə təmiz vərəq) */
+$("newBtn").addEventListener("click",()=>{const n=nextNumber();render(blank(n));aClear();toast("Yeni faktura № "+n);});
 /* Növbəti nömrə: bu ilin ən böyük nömrəsi + 1; yeni ildə 1-dən başlayır */
 /* Nömrələr ardıcıl olmalıdır: həmin ildə saxlanmış ən böyük nömrə + 1-dən böyük nömrə olmaz */
 function maxNumber(y){ let max=0; (typeof KROWS!=="undefined"?KROWS:[]).forEach(x=>{ if(x[2].slice(0,4)===y&&x[1]>max) max=x[1]; }); return max; }
@@ -675,7 +686,6 @@ function nomProblem(){
   const y=d.slice(0,4), nx=nextNumber(y);
   return n>nx?("Nömrələr ardıcıl olmalıdır. "+y+"-"+yearSuffix(y)+" il üçün növbəti nömrə: "+nx):"";
 }
-$("nextBtn").addEventListener("click",()=>{const n=nextNumber();render(blank(n));aClear();toast("Yeni faktura № "+n);});
 
 /* ---- Protokol ---- */
 const AYLAR=["Yanvar","Fevral","Mart","Aprel","May","İyun","İyul","Avqust","Sentyabr","Oktyabr","Noyabr","Dekabr"];
@@ -728,27 +738,70 @@ function pdfName(){
 let oldTitle=document.title;
 window.addEventListener("beforeprint",()=>{oldTitle=document.title; document.title=pdfName();});
 window.addEventListener("afterprint",()=>{document.title=oldTitle;});
-function doPrint(){ if(!(curTotal()>0)){ toast("Məbləğ 0-dır, sənəd çap edilə bilməz"); return; } if(!isSaved()){ toast("Əvvəlcə yadda saxlayın, sonra çap edə bilərsiniz"); return; } fitPage(); window.print(); }
+/* Çap: hər sənəddən 2 nüsxə — Akt, Akt, Hesab Faktura, Hesab Faktura, Protokol, Protokol */
+const PRINT_COPIES=2;
+function buildPrintBox(){
+  const box=$("printBox"); box.innerHTML="";
+  renderProtokol(); aHeader();
+  pdfSheets().forEach(sh=>{
+    const wasHidden=sh.hidden; sh.hidden=false; sh.style.zoom=""; centerMY();
+    /* xanalardakı yazılar surətə keçsin */
+    sh.querySelectorAll("input").forEach(el=>{ if(el.type==="checkbox") el.toggleAttribute("checked",el.checked); else el.setAttribute("value",el.value); });
+    sh.querySelectorAll("select").forEach(el=>[...el.options].forEach(o=>o.toggleAttribute("selected",o.selected)));
+    for(let c=0;c<PRINT_COPIES;c++){
+      const cl=sh.cloneNode(true); cl.hidden=false; cl.classList.add("pdfmode","pcopy"); cl.style.zoom=""; cl.style.minHeight="";
+      box.appendChild(cl);
+    }
+    sh.hidden=wasHidden;
+  });
+  centerMY();
+  /* hər nüsxə bir A4 səhifəyə sığsın */
+  box.classList.add("measure");
+  box.querySelectorAll(".pcopy").forEach(cl=>{ cl.style.minHeight="0"; const h=cl.scrollHeight; cl.style.minHeight=""; if(h>1110){ cl.style.zoom=(1110/h).toFixed(3); cl.style.minHeight="0"; } });
+  box.classList.remove("measure");
+}
+function doPrint(){
+  if(!(curTotal()>0)){ toast("Məbləğ 0-dır, sənəd çap edilə bilməz"); return; }
+  if(!isSaved()){ toast("Əvvəlcə yadda saxlayın, sonra çap edə bilərsiniz"); return; }
+  buildPrintBox(); document.body.classList.add("printing");
+  window.print();
+}
+window.addEventListener("afterprint",()=>{ if(document.body.classList.contains("printing")){ document.body.classList.remove("printing"); $("printBox").innerHTML=""; } });
 /* Drive qoşulana qədər: yadda saxla = Köçürmələrə yaz + PDF kimi saxlama pəncərəsi */
 function saveLocal(){ if(!(curTotal()>0)){ toast("Məbləğ 0-dır, sənəd saxlanıla bilməz"); return; } { const p=nomProblem(); if(p){ if(TAB!=="F"&&TAB!=="P"&&TAB!=="A") toast(p); else nomWarn(p); return; } } carRemember(); kUpsert(); markSaved(); toast("Yadda saxlanıldı, Köçürmələrə əlavə olundu"); fitPage(); window.print(); }
 $("printBtn").addEventListener("click",doPrint);
 /* ---- Google Drive-a avtomatik saxlama (şirkətin öz Drive-ı) ---- */
 function loadScript(src){return new Promise((ok,no)=>{const s=document.createElement("script");s.src=src;s.onload=ok;s.onerror=()=>no(new Error("Kitabxana yüklənmədi"));document.head.appendChild(s);});}
+/* Yadda saxla və Çap: Akt (Ayarlarda açıqdırsa) → Hesab Faktura → Protokol (quş işarəsi varsa) */
+function pdfSheets(){
+  const L=[];
+  if(PROFILE.showAkt!==false) L.push($("sheetA"));
+  L.push($("sheet"));
+  if($("protChk").checked) L.push($("sheetP"));
+  return L;
+}
 async function makePdfBase64(){
   if(!window.html2canvas) await loadScript("https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js");
   if(!window.jspdf) await loadScript("https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js");
-  const sheet=activeSheet(); const act=document.activeElement; if(act&&act.blur) act.blur();
-  sheet.classList.add("pdfmode"); sheet.style.zoom="";
-  try{
-    const canvas=await html2canvas(sheet,{scale:2,backgroundColor:"#ffffff",useCORS:true,windowWidth:sheet.scrollWidth});
-    const pdf=new jspdf.jsPDF({orientation:"portrait",unit:"mm",format:"a4"});
-    let w=210,h=canvas.height*210/canvas.width,x=0;
-    if(h>297){ w=w*297/h; h=297; x=(210-w)/2; }
-    pdf.addImage(canvas.toDataURL("image/jpeg",0.92),"JPEG",x,0,w,h);
-    return pdf.output("datauristring").split(",")[1];
-  } finally { sheet.classList.remove("pdfmode"); }
+  const act=document.activeElement; if(act&&act.blur) act.blur();
+  renderProtokol(); aHeader();
+  const pdf=new jspdf.jsPDF({orientation:"portrait",unit:"mm",format:"a4"});
+  const list=pdfSheets();
+  for(let k=0;k<list.length;k++){
+    const sheet=list[k], wasHidden=sheet.hidden;
+    sheet.hidden=false; sheet.classList.add("pdfmode"); sheet.style.zoom=""; centerMY();
+    try{
+      const canvas=await html2canvas(sheet,{scale:2,backgroundColor:"#ffffff",useCORS:true,windowWidth:sheet.scrollWidth});
+      let w=210,h=canvas.height*210/canvas.width,x=0;
+      if(h>297){ w=w*297/h; h=297; x=(210-w)/2; }
+      if(k>0) pdf.addPage("a4","portrait");
+      pdf.addImage(canvas.toDataURL("image/jpeg",0.92),"JPEG",x,0,w,h);
+    } finally { sheet.classList.remove("pdfmode"); sheet.hidden=wasHidden; }
+  }
+  centerMY();
+  return pdf.output("datauristring").split(",")[1];
 }
-function fileName(){ if(TAB==="P"||TAB==="A") return pdfName(); return ($("nom").value.trim()+" №-li Hesab  Faktura,"+$("buyer").value.trim()).replace(/[\\/:*?"<>|]/g," ").trim(); }
+function fileName(){ return ($("nom").value.trim()+" №-li Hesab  Faktura,"+$("buyer").value.trim()).replace(/[\\/:*?"<>|]/g," ").trim(); }
 async function saveToDrive(){
   { const p=nomProblem(); if(p){ nomWarn(p); $("nomCtl").focus(); return; } }
   if(!(curTotal()>0)){ toast("Məbləğ 0-dır, sənəd saxlanıla bilməz"); return; }
