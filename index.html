@@ -206,6 +206,9 @@ body.locked #login{display:flex}
 .spanel textarea{resize:vertical;min-height:34px}
 .spanel button{font:inherit;font-size:13px;font-weight:500;border:1px solid var(--line);background:var(--bg);color:var(--fg);border-radius:6px;padding:7px 12px;cursor:pointer}
 .spanel button.pri{background:var(--accent);border-color:var(--accent);color:#fff}
+body.noakt>.hint{display:none}
+.spanel .schk{flex-direction:row;align-items:center;gap:8px;font-size:13px;color:var(--fg);padding-top:18px}
+.spanel .schk input{width:auto}
 .sact{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
 .ctable{width:100%;border-collapse:collapse;font-size:13px}
 .ctable th{font-size:12px;font-weight:600;color:var(--muted);text-align:left;padding:4px;border-bottom:1px solid var(--line)}
@@ -425,6 +428,7 @@ body.zero::before{content:none}
     <label>Əlaqə nömrəsi<input id="s_phone"></label>
     <label>E-mail<input id="s_email"></label>
     <label>SMS sonu (imza)<input id="s_smsSign"></label>
+    <label class="schk"><input type="checkbox" id="s_showAkt"> Akt bölməsini göstər</label>
   </div>
   <h2>Müştərilər</h2>
   <div class="cwrap"><table class="ctable">
@@ -1098,6 +1102,9 @@ function applyProfile(){
   $("fEmail").textContent=p.email||""; $("fEmail").href=p.email?"mailto:"+p.email:"#";
   $("whoName").textContent=p.name||"";
   document.title=(p.name?p.name+" — ":"")+"Hesab Faktura";
+  const noAkt=p.showAkt===false;
+  $("tabA").hidden=noAkt; document.body.classList.toggle("noakt",noAkt);
+  if(noAkt&&TAB==="A") setTab("F");
 }
 function applyData(d){
   PROFILE=d.profile||{}; CUSTOMERS=Array.isArray(d.customers)?d.customers:[];
@@ -1146,6 +1153,7 @@ function sAddRow(c){
 function sRender(){
   const p=PROFILE||{}, b=p.bank||[];
   S_FIELDS.forEach(f=>$("s_"+f).value=p[f]||"");
+  $("s_showAkt").checked=p.showAkt!==false;
   for(let i=1;i<=6;i++) $("s_b"+i).value=b[i-1]||"";
   $("sCust").innerHTML=""; CUSTOMERS.forEach(c=>sAddRow(c));
   ["pOld","pNew","pNew2"].forEach(id=>$(id).value="");
@@ -1155,6 +1163,7 @@ $("sSave").addEventListener("click",async()=>{
   const p=Object.assign({},PROFILE);
   S_FIELDS.forEach(f=>p[f]=$("s_"+f).value.trim());
   p.bank=[1,2,3,4,5,6].map(i=>$("s_b"+i).value.trim());
+  p.showAkt=$("s_showAkt").checked;
   const cust=[...$("sCust").rows].map(tr=>[...tr.querySelectorAll("input,textarea")].map(e=>e.value.trim())).filter(c=>c[0]);
   const btn=$("sSave"); btn.disabled=true;
   try{
@@ -1162,7 +1171,9 @@ $("sSave").addEventListener("click",async()=>{
     const keep=$("cust").value!==""?CUSTOMERS[$("cust").value]:null;
     PROFILE=j.data.profile; CUSTOMERS=j.data.customers;
     try{ localStorage.setItem(LSP+"data",JSON.stringify({profile:PROFILE,customers:CUSTOMERS})); }catch(e){}
+    const hadAkt=!$("tabA").hidden;
     applyProfile(); fillCustomers();
+    if(hadAkt&&PROFILE.showAkt===false){ aClearSrv(); aCalc(); }
     if(keep){ const i=CUSTOMERS.findIndex(c=>c[0]===keep[0]); $("cust").value=i>=0?String(i):""; }
     $("aGiver").value=PROFILE.signer||PROFILE.seller||$("aGiver").value;
     save(); aCalc(); sRender(); toast("Ayarlar yadda saxlanıldı");
@@ -1194,6 +1205,7 @@ async function migrateOld(d){
   return j.data;
 }
 
+function aClearSrv(){ [...$("srvRows").rows].forEach(tr=>tr.querySelectorAll("input").forEach(i=>i.value="")); }
 /* ---- tətbiqin işə düşməsi (girişdən sonra) ---- */
 function startApp(d){
   LSP="hf_"+SESSION.u.slice(0,10)+"_";
@@ -1201,6 +1213,7 @@ function startApp(d){
   document.querySelectorAll("#sheet input").forEach(el=>{ if(el.id && el.id!=="receiver"){ el.readOnly=true; el.tabIndex=-1; } });
   let as=null; try{ as=JSON.parse(localStorage.getItem(LSP+"akt")||"null"); }catch(e){}
   aRender(as);
+  if(PROFILE.showAkt===false) aClearSrv();   // akt bağlıdırsa köhnə xidmət haqqı fakturaya düşməsin
   const saved=load();
   if(saved) render(saved);
   else{ render({cust:"",nom:String(nextNumber()),date:today(),dateTxt:isoToTxt(today()),qeyd:true,receiver:PROFILE.receiver||"",rows:[]}); }
