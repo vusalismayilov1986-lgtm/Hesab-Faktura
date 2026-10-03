@@ -32,6 +32,7 @@ body{background:var(--bg);color:var(--fg);font-family:var(--ui);padding:16px}
 .sheet{width:794px;min-height:1123px;margin:0 auto;background:var(--paper);color:var(--ink);font-family:var(--doc);font-size:14px;padding:70px 34px 30px;box-shadow:0 2px 14px rgba(0,0,0,.18);box-sizing:border-box}
 .sheet input{font:inherit;color:inherit;background:transparent;border:0;padding:0 2px;width:100%;box-sizing:border-box}
 .sheet input[readonly]{pointer-events:none;cursor:default;background:transparent!important;outline:0!important}
+#rows tr.svc select{pointer-events:none}
 .sheet select.un:disabled{cursor:not-allowed;background:transparent;outline:0}
 .sheet input:disabled{cursor:not-allowed;background:transparent;color:inherit}
 .sheet select.un{font:inherit;color:inherit;background:transparent;border:0;width:100%;padding:0;appearance:none;-webkit-appearance:none;text-align:center;text-align-last:center;cursor:pointer}
@@ -60,7 +61,8 @@ table.items tr.total td{font-weight:700;font-size:14px;padding:2px 3px}
 .sign2{display:grid;grid-template-columns:260px 1fr 190px;align-items:end;margin-top:42px;font-weight:700;font-size:14px}
 .sign2 .mid{text-align:left;padding-left:2px;white-space:nowrap}
 .sign2 .ln{border-bottom:1px solid #000;height:16px}
-.my{text-align:right;font-weight:700;margin:22px 92px 36px 0}
+.my{position:relative;height:20px;font-weight:700;margin:22px 0 36px}
+.my span,#sheetA .amy span{position:absolute;top:0;white-space:nowrap}
 .sheet.compact .my{margin-bottom:18px}
 .sheet{display:flex;flex-direction:column}
 .foot{margin-top:auto;border-top:1px dashed #000;padding-top:6px;display:grid;grid-template-columns:150px 1fr;row-gap:3px;font-size:9.5px}
@@ -83,6 +85,7 @@ table.items tr.total td{font-weight:700;font-size:14px;padding:2px 3px}
 .psheet td{border:1px solid #000;height:24px;padding:0 3px;text-align:center}
 .psheet td.l{text-align:left}
 .psheet tr.ptot td{height:33px;font-weight:700}
+.psheet .ptottxt{position:relative;left:-14px}
 .psheet .pnotes{margin:18px 0 0;text-align:justify;line-height:2.05}
 .psheet .psign{display:grid;grid-template-columns:62% 38%;margin-top:64px;font-weight:700;line-height:1.25;align-items:end}
 .psheet .psign .who{display:flex;flex-direction:column;gap:10px}
@@ -94,9 +97,47 @@ table.items tr.total td{font-weight:700;font-size:14px;padding:2px 3px}
 .psheet .pmy span{position:absolute;top:0}
 .psheet .pmy span:first-child{left:44%}
 .psheet .pmy span:last-child{left:86%}
+/* ---- Akt vərəqi ---- */
+#sheetA{font-size:13.3px;padding:40px 44px 30px}
+#sheetA input,#sheetA select{font:inherit;color:inherit;background:transparent;border:0;padding:0 2px;width:100%;outline:0}
+#sheetA select{appearance:none;-webkit-appearance:none;text-align:center;text-align-last:center;cursor:pointer}
+#sheetA input[readonly]{pointer-events:none}
+#sheetA input:disabled,#sheetA select:disabled{cursor:not-allowed;color:inherit}
+#sheetA td:focus-within{background:#e3eefa;box-shadow:inset 0 0 0 1px #8fb4dc}
+#sheetA .atitle{text-align:center;font-weight:700;font-size:16px;margin:0 0 40px}
+#sheetA table{width:100%;border-collapse:collapse;table-layout:fixed}
+#sheetA td,#sheetA th{border:1px solid #000;height:24px;padding:0 3px;vertical-align:middle;overflow:hidden;white-space:nowrap}
+#sheetA th{background:var(--head);font-weight:700;text-align:center;line-height:1.1}
+#sheetA .c{text-align:center}
+#sheetA .l{text-align:left}
+#sheetA .r{text-align:right}
+#sheetA .i{font-style:italic}
+#sheetA .b{font-weight:700}
+#sheetA .gap{height:16px}
+#sheetA .t-top td{height:24px}
+#sheetA .t-car td{height:26px}
+#sheetA .t-srv th{height:31px}
+#sheetA .t-srv td.ltr{font-style:italic;text-align:center;vertical-align:top}
+#sheetA .t-prt th{height:34px;white-space:normal}
+#sheetA tr.sum td{font-style:italic}
+#sheetA .sumtxt{position:relative;left:-50px}
+#sheetA .grandtxt{left:-8px}
+#sheetA tr.grand td{border:0;font-weight:700;height:26px}
+#sheetA tr.grand .big{font-size:14.6px}
+#sheetA .anote{font-style:italic;margin:4px 0 0;line-height:1.25;white-space:normal}
+#sheetA .asign{display:grid;grid-template-columns:24.6% 43% 32.4%;align-items:end;font-size:16px;margin-top:56px}
+#sheetA .asign .nm{text-align:left;padding-left:12%}
+#sheetA .asign .nm input{text-align:left;padding:0}
+#sheetA .asign .ln{border-bottom:1px solid #000;height:1px;margin:0 14% 2px 6%}
+#sheetA .asign2{margin-top:44px}
+#sheetA .amy{position:relative;height:22px;font-weight:700;font-size:16px;margin-top:22px}
 @page{size:A4;margin:0}
 @media print{html,body{margin:0}body{background:#fff;padding:0}.bar,.hint,.rowtools,.toast,.tabs{display:none!important}.scroll{overflow:visible;padding:0}.sheet{box-shadow:none;margin:0 auto}.sheet input:hover,.sheet input:focus{background:transparent;outline:0}#rows tr.pempty{display:none}#rows td{background:transparent!important;box-shadow:none!important}body.zero .scroll{display:none!important}body.zero::before{content:"Ödəniləcək məbləğ 0-dır, faktura çap edilə bilməz";display:block;padding:60px 40px;font:600 18px/1.4 sans-serif;text-align:center}}
 .sheet.pdfmode #rows tr.pempty{display:none}
+#sheetA.pdfmode td{background:transparent!important;box-shadow:none!important}
+#sheetA.pdfmode #prtRows tr.pempty{display:none}
+@media print{#prtRows tr.pempty{display:none}}
+@media print{#sheetA td{background:transparent!important;box-shadow:none!important}}
 .sheet.pdfmode input,.sheet.pdfmode select{background:transparent!important;outline:0!important}
 .sheet.pdfmode{box-shadow:none}
 body.zero::before{content:none}
@@ -122,10 +163,11 @@ body.zero::before{content:none}
   <button id="printBtn" type="button">Çap et</button>
 </div>
 <div class="tabs" role="tablist">
-  <button id="tabF" type="button" role="tab" aria-selected="true">Hesab Faktura</button>
+  <button id="tabA" type="button" role="tab" aria-selected="true">Akt</button>
+  <button id="tabF" type="button" role="tab" aria-selected="false">Hesab Faktura</button>
   <button id="tabP" type="button" role="tab" aria-selected="false">Protokol</button>
 </div>
-<p class="hint">Fakturanın üzərindəki istənilən sahəyə klikləyib yaza bilərsiniz. Məbləğ, cəm və sözlə yazılış avtomatik hesablanır.</p>
+<p class="hint">Malları hesab fakturada və ya aktda yazın — hər ikisində eyni görünür. Aktdakı xidmətlərin cəmi fakturaya "Xidmət haqqı (usta)" sətri kimi düşür.</p>
 
 <div class="scroll">
 <div class="sheet" id="sheet">
@@ -146,7 +188,7 @@ body.zero::before{content:none}
     <colgroup><col style="width:5.5%"><col style="width:41%"><col style="width:9.5%"><col style="width:10%"><col style="width:11.5%"><col style="width:13.5%"></colgroup>
     <thead><tr><th>№</th><th>Mallar (İşlər Xidmətlər)</th><th>Ölçü vahidi</th><th>Miqdarı</th><th>Qiymət</th><th>Məbləğ</th></tr></thead>
     <tbody id="rows"></tbody>
-    <tbody><tr class="total"><td colspan="2" id="totWrap" style="border-right:0">Ödəniləcək ümumi məbləğ</td><td colspan="4" style="border-left:0" id="totWords"></td></tr></tbody>
+    <tbody><tr class="total"><td style="border-right:0"></td><td colspan="5" id="totWrap" style="border-left:0;padding-left:0">Ödəniləcək ümumi məbləğ&nbsp;&nbsp;&nbsp;<span id="totWords"></span></td></tr></tbody>
   </table>
 
   <div class="bank">
@@ -169,10 +211,10 @@ body.zero::before{content:none}
 
   <div class="sign2">
     <div>Fiziki şəxs</div>
-    <div class="mid">Sarıyev Məzahir Ağaəli oğlu</div>
+    <div class="mid" id="signerName">Sarıyev Məzahir Ağaəli oğlu</div>
     <div class="ln"></div>
   </div>
-  <div class="my">M.Y</div>
+  <div class="my"><span id="myF" style="right:80px">M.Y</span></div>
 
   <div class="foot">
     <div>Ünvan</div><div>Bakı şəhəri Nərimanov rayonu Ziya Bünyadov pr 64/68</div>
@@ -189,76 +231,124 @@ body.zero::before{content:none}
     <colgroup><col style="width:7.14%"><col style="width:14.44%"><col style="width:16.33%"><col style="width:22.74%"><col style="width:8.16%"><col style="width:9.91%"><col style="width:10.21%"><col style="width:11.07%"></colgroup>
     <thead><tr><th>№</th><th colspan="3">Malın adı</th><th>Ölçü vahidi</th><th>Miqdarı</th><th>Qiymət (AZN)</th><th>Məbləğ (AZN)</th></tr></thead>
     <tbody id="pRows"></tbody>
-    <tbody><tr class="ptot"><td colspan="2" style="text-align:center">Ümumi məbləğ</td><td id="pSum" style="text-align:right;border-right:0"></td><td colspan="5" class="l" id="pTotal" style="border-left:0"></td></tr></tbody>
+    <tbody><tr class="ptot"><td style="border-right:0"></td><td colspan="7" class="l" style="border-left:0;padding-left:0">Ümumi məbləğ&nbsp;&nbsp;&nbsp;<span id="pSum"></span>&nbsp;<span id="pTotal"></span></td></tr></tbody>
   </table>
   <div class="pnotes">1.Qiymət razılaşması protokolu, hesablaşma üçün əsas sayılır və biri Satıcıda, digəri isə Alıcıda saxlanılmaqla, iki nüsxədə tərtib edilir və imzalandığı gündən qüvvəyə minir<br>2.Təqdim edilmiş malların dəyəri mal “Alıcı”ya&nbsp; <b>E-qaimə və ya Hesab Faktura göndərildikdən</b> sonra 15 (on beş)&nbsp; günü ərzində “Alıcı” tərəfindən&nbsp; “Satıcı”ya ödəniləcəkdir.</div>
   <div class="psign">
     <div class="who"><span>Fiziki şəxs</span><span class="nm"><span id="pSeller"></span><span class="ln"></span></span></div>
     <div class="who right" id="pBuyerBox"><span id="pDirTitle"></span><span class="nm"><span id="pDirName"></span><span class="ln"></span></span></div>
   </div>
-  <div class="pmy"><span>M.Y</span><span>M.Y</span></div>
+  <div class="pmy"><span id="myP1">M.Y</span><span id="myP2">M.Y</span></div>
+</div>
+<div class="sheet" id="sheetA" hidden>
+  <div class="atitle" id="aTitle">AVTOMOBİLİN TƏMİRİ AKTI</div>
+
+  <table class="t-top">
+    <colgroup><col style="width:14.97%"><col style="width:13.98%"><col style="width:5.92%"><col style="width:17.8%"><col style="width:10.87%"><col style="width:8.34%"><col style="width:15.25%"><col style="width:12.87%"></colgroup>
+    <tr>
+      <td>Aktın tarixi</td><td colspan="2" id="aDate" class="c"></td>
+      <td style="border-right:0">Hesab fakturanın №</td><td class="l" id="aNom" style="border-left:0"></td>
+      <td colspan="2">Hesab fakturanın tarixi</td><td id="aDate2"></td>
+    </tr>
+  </table>
+  <div class="gap"></div>
+
+  <table class="t-car">
+    <colgroup><col style="width:14.97%"><col style="width:13.98%"><col style="width:5.92%"><col style="width:17.8%"><col style="width:10.87%"><col style="width:8.34%"><col style="width:15.25%"><col style="width:12.87%"></colgroup>
+    <tr><td colspan="3" class="c">Avtomobil haqqında məlumatlar</td><td colspan="5" class="c">Avtomobil sahibi haqqında məlumatlar</td></tr>
+    <tr><td>Marka ,model</td><td colspan="2"><input id="carModel" class="cf" aria-label="Marka, model"></td><td>Ad/Soyad (mmc)</td><td colspan="4" class="c" id="oName"></td></tr>
+    <tr><td>Şassi №</td><td colspan="2"><input id="carVin" class="cf" aria-label="Şassi nömrəsi"></td><td>Müqavilə №</td><td colspan="4" class="c" id="oContract"></td></tr>
+    <tr><td>Km göstəricisi</td><td colspan="2"><input id="carKm" class="cf" inputmode="numeric" style="text-align:center" aria-label="Km göstəricisi"></td><td>VÖEN</td><td colspan="4" class="c" id="oTin"></td></tr>
+    <tr><td>Qeydiyyat nişanı</td><td colspan="2"><input id="carPlate" class="cf" style="text-align:center" aria-label="Qeydiyyat nişanı"></td><td>Telefon və e-mail</td><td colspan="4" class="c" id="oPhone"></td></tr>
+  </table>
+  <div class="gap"></div>
+
+  <table class="t-srv">
+    <colgroup><col style="width:14.97%"><col style="width:13.98%"><col style="width:5.92%"><col style="width:17.8%"><col style="width:10.87%"><col style="width:8.34%"><col style="width:15.25%"><col style="width:12.87%"></colgroup>
+    <thead><tr><th>Sıra</th><th colspan="5">Avtomobildə görülən işlər(xidmətlər)</th><th>İçraçı (usta)</th><th>Məbləğ</th></tr></thead>
+    <tbody id="srvRows"></tbody>
+    <tbody><tr class="sum"><td style="border-right:0"></td><td colspan="7" class="l" style="border-left:0;padding-left:0">Xidmətin cəmi məbləği&nbsp;&nbsp;&nbsp;<span id="srvSum"></span>&nbsp;<span id="srvWords"></span></td></tr></tbody>
+  </table>
+
+  <table class="t-prt">
+    <colgroup><col style="width:14.97%"><col style="width:13.98%"><col style="width:5.92%"><col style="width:17.8%"><col style="width:10.87%"><col style="width:8.34%"><col style="width:15.25%"><col style="width:12.87%"></colgroup>
+    <thead><tr><th>№</th><th colspan="3">İstifadə olunan ehtiyyat hissələri və Mallar</th><th>Ölçü vahidi</th><th>Miqdarı</th><th>Qiymət</th><th>Məbləğ</th></tr></thead>
+    <tbody id="prtRows"></tbody>
+    <tbody>
+      <tr class="sum"><td style="border-right:0"></td><td colspan="7" class="l" style="border-left:0;padding-left:0">Satışın cəmi məbləği&nbsp;&nbsp;&nbsp;<span id="prtSum"></span>&nbsp;<span id="prtWords"></span></td></tr>
+      <tr class="grand"><td></td><td colspan="7" class="l" style="padding-left:0"><span class="big">Yekun ödəniləcək məbləğin cəmi</span>&nbsp;&nbsp;&nbsp;<span id="allSum"></span>&nbsp;&nbsp;&nbsp;<span id="allWords"></span></td></tr>
+    </tbody>
+  </table>
+
+  <p class="anote">Qeyd:Avtomobildə görülən təmir işlərini və dəyişdirilən ehtiyyat hissələrini avtomobilin məxsus olduğu şirkətin nümayəndəsi olaraq nəzərdən keçirdim və heç bir etirazım olmadığını aşağıdakı imzamla&nbsp; təsdiq edirəm.</p>
+
+  <div class="asign"><div>Təhvil alan</div><div class="nm"><input id="aReceiver" aria-label="Təhvil alan"></div><div class="ln"></div></div>
+  <div class="asign asign2"><div>Təhvil verən</div><div class="nm"><input id="aGiver" aria-label="Təhvil verən"></div><div class="ln"></div></div>
+  <div class="amy"><span id="myA" style="left:75%">M.Y</span></div>
 </div>
 </div>
 <div class="toast" id="toast" hidden></div>
 
 <script>
 const CUSTOMERS=[
-["İdeal Motors MMC","1305797061","07-24","05.06.2024"],
-["SK Servis MMC","1603651291","02-22","01.03.2022"],
-["Great Motors QSC","1601325211","03-22","01.03.2022"],
-["Evakuator.Az MMC","1503392351","04-22","06.04.2022"],
-["Özəl Avto Servis MMC","1805404861","05-22","18.04.2022"],
-["Avtolüks Azərbaycan MMC","1402356311","EHA – 007/2022","15.04.2022"],
-["AZENCO ASC","9900009711","06-22","25.05.2022"],
-["Avto Servis Badamdar","2004610351","07-22","14.06.2022"],
-["Motor Clinic MMC","2006329531","08-22","18.07.2022"],
-["Bytelekom MMC","1305889541","09-22","31.08.2022"],
-["Konnekt QSC","1700405131","10-22","06.09.2022"],
-["Azagro Feed  MMC","1006420761","11-22","27.09.2022"],
-["Batika Global  MMC","1307805841","13-22","03.10.2022"],
-["Qəbələ N1 Çörək Zavodu  MMC","4401942591","14-22","28.11.2022"],
-["Agro Polimer MMC","5701097401","15-22","30.11.2022"],
-["AB Texnik Servis MMC","1805624411","01/23","27.02.2023"],
-["İntelligent Transport Services MMC","1006858791","02/23","28.02.2023"],
-["Naxçıvan Avtoservis MMC","0200512891","03/23","30.03.2023"],
-["Enerji-N MMC","1601380421","04/23","15.05.2023"],
-["Turka MMC","1503751171","05/23","20.07.2023"],
-["Cargo.az MMC","1501872711","06/23","07.09.2023"],
-["Fiziki şəxs Bağırov Məhəmməd Əliyəddin oğlu","3301126552","07/23","29.09.2023"],
-["Adıgözəlov Qardaşları MMC","4000245501","08/23","17.10.2023"],
-["M&T LTD","1400179181","09/23","04.11.2023"],
-["Sülh Firması","2000100401","10/23","07.11.2023"],
-["Kat Safety System MMC","1005183231","11/23","13.11.2023"],
-["Fiziki şəxs Hüseynov Rüfət Mehman oğlu","1008145082","12/23","12.12.2023"],
-["RN Strong MMC","1007806731","13/23","02.02.2024"],
-["TMX-Servis MMC","5102276471","14/23","08.02.2024"],
-["166 Express MMC","1306645091","04/24","04.04.2024"],
-["D2D DELİVERY","2008184561","05/24","16.04.2024"],
-["Car Tech MMC","1905892391","06/24","14.05.2024"],
-["Sigma Systems MMC","1505176401","08/24","10.06.2024"],
-["Sedef Pharma MMC","3102046881","09/24","09.07.2024"],
-["Aziatehnoholding MMC","1501952681","10/24","17.07.2024"],
-["Hydrotech MMC","1002044371","11/24","02.10.2024"],
-["Construction Equipment Services MMC","1703130101","12/24","18.10.2024"],
-["Nobel Elektrik MMC","1502938961","01/25","06.01.2025"],
-["Velt Service And Supply Company MMC","1701075161","02/25","13.01.2025"],
-["Texnik Servis 2016 MMC","1004055541","03/25","22.01.2025"],
-["Azer Atribut MMC","1005867471","04/25","27.01.2025"],
-["TS Group MMC","3102575941","05/25","03.04.2025"],
-["Procar Service","1008998361","06/25","15.05.2025"],
-["İkizler Klima MMC","1901982861","07/25","26.12.2025","Direktor:.\nAli Badur        ___________________"],
-["NH GROUP MMC","1602425311","08/25","29.12.2025"],
-["BESTING MMC","1305774251","09/25","29.12.2025"],
-["BCC Group QSC","1300435061","01/26","10.02.2026"],
-["AGROMACH MMC","1007503591","02/26","18.02.2026"],
-["Fiziki şəxs Məmmədov Elvin Murad oğlu","5901365242","04/26","12.06.2026"],
-["Avtoservis 555 MMC","2000006461","06/26","30.09.2026","Direktor:\nO.A. Kərimov __________________"]
+["İdeal Motors MMC", "1305797061", "07-24", "05.06.2024", "", "051 207 71 81, amil.isgandarov@performance-center.az"],
+["SK Servis MMC", "1603651291", "02-22", "01.03.2022", "", "070 315 91 98, skservis.mmc@gmail.com"],
+["Great Motors QSC", "1601325211", "03-22", "01.03.2022", "", "050 207 71 97,ilyasovavefa8@gmail.com"],
+["Evakuator.Az MMC", "1503392351", "04-22", "06.04.2022", "", "050 274 96 26, info@evakuasiya.az"],
+["Özəl Avto Servis MMC", "1805404861", "05-22", "18.04.2022", "", "070 613 64 67,055 477 01 33,allahverdi.osmanli019@mail.ru"],
+["Avtolüks Azərbaycan MMC", "1402356311", "EHA – 007/2022", "15.04.2022", "", "012 404 83 95,s.jalilov@autolux-az.com"],
+["AZENCO ASC", "9900009711", "06-22", "25.05.2022", "", "012 424-75-66,azenco@azenco.az"],
+["Avto Servis Badamdar", "2004610351", "07-22", "14.06.2022", "", "050 250 25 12,Samira.tagiyeva@autobadamdar.az"],
+["Motor Clinic MMC", "2006329531", "08-22", "18.07.2022", "", "055 264 48 80,motorclinicmmc@gmail.com"],
+["Bytelekom MMC", "1305889541", "09-22", "31.08.2022", "", "050 511 03 70,Ramil.xamiyev@atr.az"],
+["Konnekt QSC", "1700405131", "10-22", "06.09.2022", "", "055 288 85 85, ibrahim.emirov.80@mail.ru"],
+["Azagro Feed  MMC", "1006420761", "11-22", "27.09.2022", "", "055 518 41 27, Buzovna.servis@mail.ru"],
+["Batika Global  MMC", "1307805841", "13-22", "03.10.2022", "", "050 682 60 10"],
+["Qəbələ N1 Çörək Zavodu  MMC", "4401942591", "14-22", "28.11.2022", "", "050 764 46 57,tebriz477@mail.ru"],
+["Agro Polimer MMC", "5701097401", "15-22", "30.11.2022", "", "050 232 66 55,info@agropolimer.az"],
+["AB Texnik Servis MMC", "1805624411", "01/23", "27.02.2023", "", "055 876 01 83,marat.ismayilov@abst.az"],
+["İntelligent Transport Services MMC", "1006858791", "02/23", "28.02.2023", "", "050 555 07 27,sabina_akbarova@yahoo.com"],
+["Naxçıvan Avtoservis MMC", "0200512891", "03/23", "30.03.2023", "", "055 220 31 12,bayram1414@mail.ru"],
+["Enerji-N MMC", "1601380421", "04/23", "15.05.2023", "", "070 280 10 55,energi.qafqaz@gmail.com"],
+["Turka MMC", "1503751171", "05/23", "20.07.2023", "", "0555702998,turka.mmc@gmail.com"],
+["Cargo.az MMC", "1501872711", "06/23", "07.09.2023", "", "050 209 62 00"],
+["Fiziki şəxs Bağırov Məhəmməd Əliyəddin oğlu", "3301126552", "07/23", "29.09.2023", "", "055 9767664  archico.az@gmail.com"],
+["Adıgözəlov Qardaşları MMC", "4000245501", "08/23", "17.10.2023", "", "055 564 77 77"],
+["M&T LTD", "1400179181", "09/23", "04.11.2023", "", "+994 55 250 49 92,sabuhihasanov41@gmail.com"],
+["Sülh Firması", "2000100401", "10/23", "07.11.2023", "", "9945521472"],
+["Kat Safety System MMC", "1005183231", "11/23", "13.11.2023", "", "557056750"],
+["Fiziki şəxs Hüseynov Rüfət Mehman oğlu", "1008145082", "12/23", "12.12.2023", "", "0773669889"],
+["RN Strong MMC", "1007806731", "13/23", "02.02.2024", "", "0504224452,office@rnstrong.az"],
+["TMX-Servis MMC", "5102276471", "14/23", "08.02.2024", "", "0506451888"],
+["166 Express MMC", "1306645091", "04/24", "04.04.2024", "", "050 253 52 92,babakhan.yusifli@gmail.com"],
+["D2D DELİVERY", "2008184561", "05/24", "16.04.2024", "", "055 555 15 30"],
+["Car Tech MMC", "1905892391", "06/24", "14.05.2024", "", "055 555 11 45"],
+["Sigma Systems MMC", "1505176401", "08/24", "10.06.2024", "", "070 228 23 99"],
+["Sedef Pharma MMC", "3102046881", "09/24", "09.07.2024", "", "051 261 20 56"],
+["Aziatehnoholding MMC", "1501952681", "10/24", "17.07.2024", "", "055 408 77 20"],
+["Hydrotech MMC", "1002044371", "11/24", "02.10.2024", "", "050 257 19 77"],
+["Construction Equipment Services MMC", "1703130101", "12/24", "18.10.2024", "", "010 232 15 46"],
+["Nobel Elektrik MMC", "1502938961", "01/25", "06.01.2025", "", "050 323 20 35  050 232 20 35"],
+["Velt Service And Supply Company MMC", "1701075161", "02/25", "13.01.2025", "", "0102287102"],
+["Texnik Servis 2016 MMC", "1004055541", "03/25", "22.01.2025", "", "0502625029 0702003907"],
+["Azer Atribut MMC", "1005867471", "04/25", "27.01.2025", "", "0502107042   0502161817"],
+["TS Group MMC", "3102575941", "05/25", "03.04.2025", "", "+9942536540"],
+["Procar Service", "1008998361", "06/25", "15.05.2025", "", "0553000072"],
+["İkizler Klima MMC", "1901982861", "07/25", "26.12.2025", "Direktor:.\nAli Badur        ___________________", "0559640312"],
+["NH GROUP MMC", "1602425311", "08/25", "29.12.2025", "", "0553888353"],
+["BESTING MMC", "1305774251", "09/25", "29.12.2025", "", "0553888353"],
+["BCC Group QSC", "1300435061", "01/26", "10.02.2026", "", "0512069853"],
+["AGROMACH MMC", "1007503591", "02/26", "18.02.2026", "", "0512901014"],
+["Fiziki şəxs Məmmədov Elvin Murad oğlu", "5901365242", "04/26", "12.06.2026", "", "0503757476"],
+["Avtoservis 555 MMC", "2000006461", "06/26", "30.09.2026", "Direktor:\nO.A. Kərimov __________________", "0554113555"]
 ];
 const $=id=>document.getElementById(id);
-const ROWS=12, MAXROWS=20;
+const ROWS=12, MAXROWS=21;   // 20 mal + 1 xidmət haqqı sətri
 let TOTAL=0;
+let AKT_TOTAL=0;
+function curTotal(){ return (typeof TAB!=="undefined"&&TAB==="A")?AKT_TOTAL:TOTAL; }
 function updateOutputButtons(){
-  const zero=!(TOTAL>0), msg=zero?"Ödəniləcək məbləğ 0-dır, əvvəlcə mal və qiymət yazın":"";
+  const zero=!(curTotal()>0), msg=zero?"Ödəniləcək məbləğ 0-dır, əvvəlcə məlumatları doldurun":"";
   document.body.classList.toggle("zero",zero);
   ["saveBtn","printBtn"].forEach(id=>{const b=$(id); if(!b||b.dataset.busy) return; b.disabled=zero; b.title=msg;});
 }
@@ -307,7 +397,8 @@ function calc(){
   /* rows: at least 12, grow one past the last filled row, never more than 20 */
   const rs=$("rows").rows; let lastFilled=0;
   for(let k=0;k<rs.length;k++) if(rs[k].querySelector(".nm").value.trim()) lastFilled=k+1;
-  const want=Math.min(MAXROWS, Math.max(ROWS, lastFilled+1));
+  const hasSvc=[...rs].some(x=>x.classList.contains("svc"));
+  const want=Math.min(hasSvc?MAXROWS:MAXROWS-1, Math.max(ROWS, lastFilled+1));
   if(rs.length<want){ while($("rows").rows.length<want) makeRow(); return calc(); }
   if(rs.length>want){ while($("rows").rows.length>want && !$("rows").lastElementChild.querySelector(".nm").value.trim()) $("rows").lastElementChild.remove(); return calc(); }
   $("sheet").classList.toggle("compact", i>12);
@@ -339,7 +430,7 @@ function state(){
   for(const tr of $("rows").rows) s.rows.push({nm:tr.querySelector(".nm").value,un:tr.querySelector(".un").value,qt:tr.querySelector(".qt").value,pr:tr.querySelector(".pr").value});
   return s;
 }
-function save(){try{localStorage.setItem("hf_mezahir",JSON.stringify(state()));}catch(e){} if(typeof renderProtokol==="function") renderProtokol();}
+function save(){try{localStorage.setItem("hf_mezahir",JSON.stringify(state()));}catch(e){} if(typeof renderProtokol==="function") renderProtokol(); if(typeof aHeader==="function") aHeader();}
 function load(){try{return JSON.parse(localStorage.getItem("hf_mezahir")||"null");}catch(e){return null;}}
 const FIXED=["seller","sellerTin","cur","b1","b2","b3","b4","b5","b6"];
 function render(s){
@@ -372,7 +463,7 @@ function nextCell(t){
   if(t.matches(".nm")) next=tr.querySelector(".un");
   else if(t.matches(".un")) next=tr.querySelector(".qt");
   else if(t.matches(".qt")) next=tr.querySelector(".pr");
-  else if(t.matches(".pr")){ const nr=tr.nextElementSibling; next=nr&&nr.querySelector(".nm"); }
+  else if(t.matches(".pr")){ let nr=tr.nextElementSibling; while(nr&&nr.classList.contains("svc")) nr=nr.nextElementSibling; next=nr&&nr.querySelector(".nm"); }
   if(next&&!next.disabled){ next.focus(); if(next.select) next.select(); return true; }
   return false;
 }
@@ -395,16 +486,22 @@ function cleanNumber(v,dec){
   return v;
 }
 $("rows").addEventListener("input",e=>{
-  const t=e.target; if(!t.matches(".qt,.pr")) return;
+  const t=e.target;
+  if(t.matches(".nm")){ const c=capFirst(t.value); if(c!==t.value){ const p=t.selectionStart; t.value=c; t.setSelectionRange(p,p); } }
+  if(!t.matches(".qt,.pr")) return;
   const c=cleanNumber(t.value,t.matches(".pr")?2:3);
   if(c!==t.value){ const pos=Math.max(0,(t.selectionStart||0)-(t.value.length-c.length)); t.value=c; try{t.setSelectionRange(pos,pos);}catch(_){} }
 });
+/* Hesab faktura → Akt (mallar və təhvil alan) */
+$("rows").addEventListener("input",()=>syncAkt());
+$("rows").addEventListener("change",e=>{ if(e.target.matches("select")) syncAkt(); });
+$("receiver").addEventListener("input",()=>syncAkt());
 $("sheet").addEventListener("focusin",e=>{
   const t=e.target;
-  if(t.matches("#rows input")&&t.value){ t.select(); t.dataset.jf="1"; }
+  if(t.matches("#rows input")&&t.value&&!t.readOnly){ t.select(); t.dataset.jf="1"; }
 });
-$("newBtn").addEventListener("click",()=>{render(blank($("nom").value));toast("Mallar siyahısı təmizləndi");});
-$("nextBtn").addEventListener("click",()=>{const n=(parseInt($("nom").value,10)||0)+1;render(blank(n));toast("Yeni faktura № "+n);});
+$("newBtn").addEventListener("click",()=>{render(blank($("nom").value));aClear();toast("Mallar siyahısı təmizləndi");});
+$("nextBtn").addEventListener("click",()=>{const n=(parseInt($("nom").value,10)||0)+1;render(blank(n));aClear();toast("Yeni faktura № "+n);});
 
 /* ---- Protokol ---- */
 const AYLAR=["Yanvar","Fevral","Mart","Aprel","May","İyun","İyul","Avqust","Sentyabr","Oktyabr","Noyabr","Dekabr"];
@@ -428,19 +525,23 @@ function renderProtokol(){
   }
   $("pSum").textContent=fmt(TOTAL); $("pTotal").textContent="manat ("+words(TOTAL)+")";
   $("pSeller").textContent=$("seller").value;
+  setTimeout(()=>{ if(typeof centerMY==="function") centerMY(); },0);
   const c=CUSTOMERS[$("cust").value], dir=(c&&c[4])||"";
   const parts=dir.split("\n"), title=(parts[0]||"").replace(/[.:]+$/,"")+(dir?":":""), name=(parts[1]||"").replace(/_+/g,"").trim();
   $("pDirTitle").textContent=dir?title:""; $("pDirName").textContent=name; $("pBuyerBox").style.visibility=dir?"visible":"hidden";
 }
-let TAB="F";
-function activeSheet(){ return TAB==="P"?$("sheetP"):$("sheet"); }
+let TAB="A";
+function activeSheet(){ return TAB==="P"?$("sheetP"):TAB==="A"?$("sheetA"):$("sheet"); }
 function setTab(t){
-  TAB=t; $("tabF").setAttribute("aria-selected",t==="F"); $("tabP").setAttribute("aria-selected",t==="P");
-  $("sheet").hidden=t!=="F"; $("sheetP").hidden=t!=="P"; $("rows")&&renderProtokol();
+  TAB=t; ["F","P","A"].forEach(k=>$("tab"+k).setAttribute("aria-selected",t===k));
+  $("sheet").hidden=t!=="F"; $("sheetP").hidden=t!=="P"; $("sheetA").hidden=t!=="A";
+  renderProtokol(); aHeader(); updateOutputButtons(); centerMY();
 }
 $("tabF").addEventListener("click",()=>setTab("F"));
 $("tabP").addEventListener("click",()=>setTab("P"));
+$("tabA").addEventListener("click",()=>setTab("A"));
 function pdfName(){
+  if(TAB==="A") return ($("nom").value.trim()+"  №-li Hesab  Faktura,  "+$("buyer").value.trim()+",  "+$("carPlate").value.trim()).replace(/[\\/:*?"<>|]/g," ").trim();
   if(TAB==="P"){ const d=$("dateCtl").value.split("-"); return ($("buyer").value.trim()+" "+(d.length===3?d[2]+"."+d[1]+"."+d[0]:"")).replace(/[\\/:*?"<>|]/g," ").trim(); }
   const n=$("nom").value.trim(), b=$("buyer").value.trim();
   return (n+" №-li Hesab  Faktura,"+b).replace(/[\\/:*?"<>|]/g," ").trim();
@@ -448,7 +549,7 @@ function pdfName(){
 let oldTitle=document.title;
 window.addEventListener("beforeprint",()=>{oldTitle=document.title; document.title=pdfName();});
 window.addEventListener("afterprint",()=>{document.title=oldTitle;});
-function doPrint(){ if(!(TOTAL>0)){ toast("Ödəniləcək məbləğ 0-dır, faktura çap edilə bilməz"); return; } fitPage(); window.print(); }
+function doPrint(){ if(!(curTotal()>0)){ toast("Məbləğ 0-dır, sənəd çap edilə bilməz"); return; } fitPage(); window.print(); }
 $("printBtn").addEventListener("click",doPrint);
 /* ---- Google Drive-a avtomatik saxlama ---- */
 const DRIVE_URL = "";               // Apps Script veb-tətbiq linki bura yazılır
@@ -468,9 +569,9 @@ async function makePdfBase64(){
     return pdf.output("datauristring").split(",")[1];
   } finally { sheet.classList.remove("pdfmode"); }
 }
-function fileName(){ if(TAB==="P") return pdfName(); return ($("nom").value.trim()+" №-li Hesab  Faktura,"+$("buyer").value.trim()).replace(/[\\/:*?"<>|]/g," ").trim(); }
+function fileName(){ if(TAB==="P"||TAB==="A") return pdfName(); return ($("nom").value.trim()+" №-li Hesab  Faktura,"+$("buyer").value.trim()).replace(/[\\/:*?"<>|]/g," ").trim(); }
 async function saveToDrive(){
-  if(!(TOTAL>0)){ toast("Ödəniləcək məbləğ 0-dır, faktura saxlanıla bilməz"); return; }
+  if(!(curTotal()>0)){ toast("Məbləğ 0-dır, sənəd saxlanıla bilməz"); return; }
   if(!DRIVE_URL){ toast("Google Drive hələ qoşulmayıb, adi saxlama açılır"); return doPrint(); }
   if(!$("buyer").value.trim()){ toast("Əvvəlcə müştərini seçin"); return; }
   const btn=$("saveBtn"), label=btn.textContent; btn.disabled=true; btn.dataset.busy="1"; btn.textContent="Saxlanılır…";
@@ -485,13 +586,179 @@ async function saveToDrive(){
   }finally{ delete btn.dataset.busy; btn.textContent=label; updateOutputButtons(); }
 }
 $("saveBtn").addEventListener("click",saveToDrive);
+/* M.Y — imza xəttinin ortasında */
+function centerMY(){
+  const pairs=[["myF","#sheet .sign2 .ln"],["myP1","#sheetP .psign .who:first-child .ln"],["myP2","#sheetP .psign .right .ln"],["myA","#sheetA .asign2 .ln"]];
+  pairs.forEach(([id,sel])=>{
+    const my=$(id), ln=document.querySelector(sel); if(!my||!ln||!my.offsetParent) return;
+    const box=my.parentElement.getBoundingClientRect(), lr=ln.getBoundingClientRect(), w=my.getBoundingClientRect().width;
+    my.style.right="auto"; my.style.left=(lr.left+lr.width/2-box.left-w/2)+"px";
+  });
+}
 function fitPage(){
-  const s=activeSheet(); s.style.zoom=""; s.style.minHeight="0";
+  const s=activeSheet(); s.style.zoom=""; s.style.minHeight=""; centerMY(); s.style.minHeight="0";
   const h=s.scrollHeight; s.style.minHeight="";
-  const max=1120; if(h>max) s.style.zoom=(max/h).toFixed(3);
+  const max=1110; if(h>max){ s.style.zoom=(max/h).toFixed(3); s.style.minHeight="0"; }
 }
 window.addEventListener("beforeprint",fitPage);
-window.addEventListener("afterprint",()=>{$("sheet").style.zoom="";$("sheetP").style.zoom="";});
+window.addEventListener("afterprint",()=>{["sheet","sheetP","sheetA"].forEach(i=>{$(i).style.zoom="";$(i).style.minHeight="";});});
+/* ================= AKT ================= */
+const A_SRV=7, A_PRT=12, A_PRTMAX=20, A_LET="ABCDEFG", A_UNITS=["ədəd","dəst","qram","litr"];
+
+function aMakeSrv(d={}){
+  const tr=document.createElement("tr");
+  tr.innerHTML=`<td class="ltr"></td><td colspan="5"><input class="nm"></td><td><input class="us"></td><td class="c"><input class="am" inputmode="decimal" style="text-align:center"></td>`;
+  tr.querySelector(".nm").value=d.nm||""; tr.querySelector(".us").value=d.us||""; tr.querySelector(".am").value=d.am||"";
+  $("srvRows").appendChild(tr);
+}
+function aMakePrt(d={}){
+  const tr=document.createElement("tr");
+  tr.innerHTML=`<td class="c n"></td><td colspan="3"><input class="nm"></td><td class="c"><select class="un" aria-label="Ölçü vahidi"><option value=""></option>${A_UNITS.map(u=>`<option>${u}</option>`).join("")}</select></td><td class="c"><input class="qt" inputmode="decimal" style="text-align:center"></td><td class="c"><input class="pr" inputmode="decimal" style="text-align:center"></td><td class="c sm"></td>`;
+  tr.querySelector(".nm").value=d.nm||"";
+  const u=tr.querySelector(".un"); if(d.un&&!A_UNITS.includes(d.un)) u.add(new Option(d.un,d.un)); u.value=d.un||"";
+  tr.querySelector(".qt").value=d.qt||""; tr.querySelector(".pr").value=d.pr||"";
+  $("prtRows").appendChild(tr);
+}
+function aCalc(){
+  let s1=0, li=0;
+  const anySrv=[...$("srvRows").rows].some(tr=>tr.querySelector(".nm").value.trim());
+  [...$("srvRows").rows].forEach((tr,k)=>{
+    const nm=tr.querySelector(".nm").value.trim(), us=tr.querySelector(".us"), am=tr.querySelector(".am");
+    tr.cells[0].textContent=nm?A_LET[li++]:"";
+    us.disabled=!nm; if(!nm) us.value=""; am.disabled=!nm; if(!nm) am.value="";
+    us.title=am.title=nm?"":"Əvvəlcə görülən işi yazın";
+    const v=num(am.value); if(!isNaN(v)) s1+=v;
+  });
+  let s2=0,n=0;
+  for(const tr of $("prtRows").rows){
+    const nm=tr.querySelector(".nm").value.trim(), un=tr.querySelector(".un"), qt=tr.querySelector(".qt"), pr=tr.querySelector(".pr");
+    un.disabled=!nm; if(un.disabled) un.value="";
+    qt.disabled=!un.value; if(qt.disabled) qt.value="";
+    pr.disabled=!qt.value.trim(); if(pr.disabled) pr.value="";
+    un.title=un.disabled?"Əvvəlcə malın adını yazın":""; qt.title=qt.disabled?"Əvvəlcə ölçü vahidini seçin":""; pr.title=pr.disabled?"Əvvəlcə miqdarı yazın":"";
+    tr.querySelector(".n").textContent=nm?String(++n):"";
+    const q=num(qt.value), p=num(pr.value), a=(!isNaN(p)&&p!==0)?(isNaN(q)?0:q)*p:NaN;
+    tr.querySelector(".sm").textContent=isNaN(a)?"":fmt(Math.round(a*100)/100);
+    if(!isNaN(a)) s2+=a;
+  }
+  /* ehtiyat hissələri cədvəli: ən az 12, doldurduqca 20-yə qədər */
+  const pr_=$("prtRows").rows; let lf=0;
+  for(let k=0;k<pr_.length;k++){ if(pr_[k].querySelector(".nm").value.trim()) lf=k+1; pr_[k].classList.toggle("pempty",k>=A_PRT&&!pr_[k].querySelector(".nm").value.trim()); }
+  const want=Math.min(A_PRTMAX,Math.max(A_PRT,lf+1));
+  if(pr_.length<want){ while($("prtRows").rows.length<want) aMakePrt(); return aCalc(); }
+  if(pr_.length>want){ while($("prtRows").rows.length>want&&!$("prtRows").lastElementChild.querySelector(".nm").value.trim()) $("prtRows").lastElementChild.remove(); return aCalc(); }
+  syncInvoice(Math.round(s1*100)/100);
+  s1=Math.round(s1*100)/100; s2=Math.round(s2*100)/100; AKT_TOTAL=Math.round((s1+s2)*100)/100;
+  $("srvSum").textContent=fmt(s1); $("srvWords").textContent="manat ("+words(s1)+")";
+  $("prtSum").textContent=fmt(s2); $("prtWords").textContent="manat ("+words(s2)+")";
+  $("allSum").textContent=fmt(AKT_TOTAL); $("allWords").textContent="manat ("+words(AKT_TOTAL)+")";
+  updateOutputButtons(); aSave();
+}
+function aHeader(){
+  if(!$("sheetA")) return;
+  const d=$("dateCtl").value, c=CUSTOMERS[$("cust").value];
+  const dd=d?d.split("-").reverse().join("."):"";
+  $("aDate").textContent=dd; $("aDate2").textContent=dd; $("aNom").textContent=$("nom").value;
+  $("oName").textContent=$("buyer").value; $("oContract").textContent=$("contract").value; $("oTin").textContent=$("buyerTin").value;
+  $("oPhone").textContent=(c&&c[5])||"";
+  $("aTitle").textContent=$("buyer").value.trim()==="Legacy Motor and Service MMC"?"QÜSUR AKTI":"AVTOMOBİLİN TƏMİRİ AKTI";
+}
+function aState(){
+  return {car:["carModel","carVin","carKm","carPlate"].map(id=>$(id).value),receiver:$("aReceiver").value,giver:$("aGiver").value,
+    srv:[...$("srvRows").rows].map(tr=>({nm:tr.querySelector(".nm").value,us:tr.querySelector(".us").value,am:tr.querySelector(".am").value})),
+    prt:[...$("prtRows").rows].map(tr=>({nm:tr.querySelector(".nm").value,un:tr.querySelector(".un").value,qt:tr.querySelector(".qt").value,pr:tr.querySelector(".pr").value}))};
+}
+function aSave(){ try{localStorage.setItem("akt_mezahir",JSON.stringify(aState()));}catch(e){} }
+function aRender(s){
+  s=s||{}; const car=s.car||[]; ["carModel","carVin","carKm","carPlate"].forEach((id,i)=>$(id).value=car[i]||""); $("carPlate").value=formatPlate($("carPlate").value);
+  $("aReceiver").value=s.receiver||"";
+  $("srvRows").innerHTML=""; for(let i=0;i<A_SRV;i++) aMakeSrv((s.srv||[])[i]);
+  $("prtRows").innerHTML=""; const pl=(s.prt||[]); for(let i=0;i<Math.min(A_PRTMAX,Math.max(A_PRT,pl.length));i++) aMakePrt(pl[i]);
+  $("aGiver").value=s.giver||$("seller").value||"";
+  aHeader(); aCalc();
+}
+function aClear(){ aRender({receiver:$("aReceiver").value,giver:$("aGiver").value}); }
+/* Akt → Hesab faktura: mallar, təhvil alan, təhvil verən (fiziki şəxs) */
+let syncing=false, READY=false;
+function syncAkt(){
+  if(syncing||!READY) return;
+  const src=[...$("rows").rows].filter(tr=>!tr.classList.contains("svc")).map(tr=>({nm:tr.querySelector(".nm").value,un:tr.querySelector(".un").value,qt:tr.querySelector(".qt").value,pr:tr.querySelector(".pr").value}));
+  while($("prtRows").rows.length<Math.min(A_PRTMAX,src.length)) aMakePrt();
+  [...$("prtRows").rows].forEach((tr,i)=>{
+    const d=src[i]||{nm:"",un:"",qt:"",pr:""};
+    tr.querySelector(".nm").value=d.nm;
+    const u=tr.querySelector(".un"); u.disabled=false; if(d.un&&!A_UNITS.includes(d.un)&&![...u.options].some(o=>o.value===d.un)) u.add(new Option(d.un,d.un)); u.value=d.un;
+    const q=tr.querySelector(".qt"), p=tr.querySelector(".pr"); q.disabled=false; p.disabled=false; q.value=d.qt; p.value=d.pr;
+  });
+  $("aReceiver").value=$("receiver").value;
+  aCalc();
+}
+function syncInvoice(svc){
+  if(syncing||!READY||!$("rows")) return; syncing=true;
+  const src=[...$("prtRows").rows].map(tr=>({nm:tr.querySelector(".nm").value,un:tr.querySelector(".un").value,qt:tr.querySelector(".qt").value,pr:tr.querySelector(".pr").value}));
+  /* xidmətin cəmi malların ardınca ayrıca sətir kimi */
+  if(svc>0){
+    let lf=0; src.forEach((d,i)=>{ if(d.nm.trim()) lf=i+1; });
+    src[lf]={nm:"Xidmət haqqı (usta)",un:"ədəd",qt:"1",pr:fmt(svc)};
+  }
+  while($("rows").rows.length<src.length) makeRow();
+  const act=document.activeElement, actCls=act&&act.closest&&act.closest("#rows")?["nm","un","qt","pr"].find(c=>act.classList.contains(c)):null;
+  [...$("rows").rows].forEach((tr,i)=>{
+    const d=src[i]||{nm:"",un:"",qt:"",pr:""}, isSvc=svc>0&&d.nm==="Xidmət haqqı (usta)"&&d.qt==="1"&&i===src.findIndex(x=>x&&x.nm==="Xidmət haqqı (usta)");
+    const set=(el,v)=>{ if(el.value!==v) el.value=v; };
+    set(tr.querySelector(".nm"),d.nm);
+    const u=tr.querySelector(".un"); u.disabled=false; if(d.un&&![...u.options].some(o=>o.value===d.un)) u.add(new Option(d.un,d.un)); set(u,d.un);
+    const q=tr.querySelector(".qt"), p=tr.querySelector(".pr"); q.disabled=false; p.disabled=false; set(q,d.qt); set(p,d.pr);
+    tr.classList.toggle("svc",isSvc);
+    tr.querySelectorAll("input").forEach(el=>{ el.readOnly=isSvc; });
+    tr.querySelector(".un").tabIndex=isSvc?-1:0;
+  });
+  if(actCls&&act.closest("tr").classList.contains("svc")){ const pv=act.closest("tr").previousElementSibling; const f=pv&&pv.querySelector("."+actCls); if(f){ f.focus(); const L=f.value.length; try{f.setSelectionRange(L,L);}catch(_){} } }
+  if($("receiver").value!==$("aReceiver").value) $("receiver").value=$("aReceiver").value;
+  $("signerName").textContent=$("aGiver").value;
+  calc(); syncing=false;
+}
+$("sheetA").addEventListener("input",e=>{
+  const t=e.target;
+  if(t.matches(".am,.pr")){ const c=cleanNumber(t.value,2); if(c!==t.value) t.value=c; }
+  if(t.matches(".qt")){ const c=cleanNumber(t.value,3); if(c!==t.value) t.value=c; }
+  if(t.id==="carKm"){ const c=t.value.replace(/\D/g,""); if(c!==t.value) t.value=c; }
+  if(t.matches("#srvRows .nm,#prtRows .nm")){ const c=capFirst(t.value); if(c!==t.value){ const p=t.selectionStart; t.value=c; t.setSelectionRange(p,p); } }
+  if(t.id==="carPlate"){ const c=formatPlate(t.value); if(c!==t.value){ t.value=c; t.setSelectionRange(c.length,c.length); } }
+  aCalc();
+});
+/* Qeydiyyat nişanı: ən çox 7 simvol, böyük hərf, "99  AN  280" forması */
+/* Cədvəl adları: 1-ci hərf böyük, qalanı kiçik (Azərbaycan hərfləri ilə: i→İ, I→ı) */
+function capFirst(v){
+  const i=v.search(/\S/); if(i<0) return v;
+  return v.slice(0,i)+v.charAt(i).toLocaleUpperCase("az")+v.slice(i+1).toLocaleLowerCase("az");
+}
+function formatPlate(v){
+  const raw=v.toUpperCase().replace(/[^A-Z0-9]/g,"").slice(0,7);
+  return [raw.slice(0,2),raw.slice(2,4),raw.slice(4,7)].filter(Boolean).join("  ");
+}
+function aNext(t){
+  aCalc();
+  if(t.classList.contains("cf")){ const list=[...document.querySelectorAll("#sheetA .cf")]; const nx=list[list.indexOf(t)+1]||$("srvRows").querySelector(".nm"); nx.focus(); nx.select&&nx.select(); return; }
+  const tr=t.closest("tr"), inSrv=tr.parentNode.id==="srvRows", order=inSrv?[".nm",".us",".am"]:[".nm",".un",".qt",".pr"];
+  const i=order.findIndex(sel=>t.matches(sel));
+  let nx=i<order.length-1?tr.querySelector(order[i+1]):null;
+  if(!nx){ const nr=tr.nextElementSibling; nx=nr?nr.querySelector(".nm"):(inSrv?$("prtRows").querySelector(".nm"):$("aReceiver")); }
+  if(nx&&!nx.disabled){ nx.focus(); nx.select&&nx.select(); }
+}
+$("sheetA").addEventListener("keydown",e=>{
+  const t=e.target;
+  if(e.key==="Enter"&&t.id==="aReceiver"){ e.preventDefault(); $("aGiver").focus(); $("aGiver").select(); return; }
+  if(e.key==="Enter"&&t.matches("input,select")&&t.id!=="aGiver"){ e.preventDefault(); if(String(t.value).trim()) aNext(t); }
+  if(t.matches("select")&&(e.key==="Delete"||e.key==="Backspace")){ e.preventDefault(); t.value=""; aCalc(); }
+});
+let aSelMouse=false;
+$("sheetA").addEventListener("pointerdown",e=>{ aSelMouse=e.target.matches("select"); });
+$("sheetA").addEventListener("change",e=>{ if(e.target.matches("select")){ aCalc(); if(aSelMouse&&e.target.value){ aSelMouse=false; aNext(e.target); } } });
+$("sheetA").addEventListener("focusin",e=>{ const t=e.target; if(t.matches("input")&&t.value){ t.select(); t.dataset.jf="1"; } });
+$("sheetA").addEventListener("mouseup",e=>{ const t=e.target; if(t.dataset&&t.dataset.jf){ e.preventDefault(); delete t.dataset.jf; } });
+(function(){ let s=null; try{s=JSON.parse(localStorage.getItem("akt_mezahir")||"null");}catch(e){} aRender(s); })();
+
 /* ---- init ---- */
 fillCustomers();
 document.querySelectorAll("#sheet input").forEach(el=>{ if(el.id && el.id!=="receiver"){ el.readOnly=true; el.tabIndex=-1; } });
@@ -502,6 +769,9 @@ else{
   render({cust:String(idx),nom:"154",date:today(),dateTxt:isoToTxt(today()),qeyd:true,rows:[{nm:"Qapı plasması",un:"ədəd",qt:"1",pr:"20"}]});
   applyCustomer();
 }
+/* ilk dəfə: aktda təhvil alan boşdursa fakturadakı adı götür */
+if(!$("aReceiver").value&&$("receiver").value) $("aReceiver").value=$("receiver").value;
+READY=true; aCalc(); setTab("F");
 </script>
 
 </body>
