@@ -174,7 +174,7 @@ body.tabK .bar,body.tabK .hint{display:none}
 .ktable input.eqin{width:17ch;border:1px solid var(--line);background:var(--bg);border-radius:5px;padding:4px 6px;font-variant-numeric:tabular-nums;letter-spacing:.02em}
 .ktable input.eqin::placeholder{color:var(--muted);font-size:12px}
 .ktable .del{border:0;background:transparent;color:var(--muted);font-size:15px;padding:0 4px}
-.ktable td.nomlink{cursor:pointer;user-select:none;text-decoration:underline dotted;text-underline-offset:3px}
+.ktable td.nomlink{cursor:pointer;user-select:none}
 .ktable td.nomlink:hover{color:var(--accent)}
 .kempty{padding:20px;text-align:center;color:var(--muted)}
 
@@ -578,6 +578,8 @@ function toast(t){const e=$("toast");e.textContent=t;e.hidden=false;clearTimeout
 $("sheet").addEventListener("input",e=>{ if(e.target.id==="nom")$("nomCtl").value=e.target.value; if(e.target.id==="dateTxt"){const m=e.target.value.match(/^(\d{2})\.(\d{2})\.(\d{4})$/); if(m)$("dateCtl").value=`${m[3]}-${m[2]}-${m[1]}`;} calc(); });
 $("cust").addEventListener("change",applyCustomer);
 $("nomCtl").addEventListener("input",()=>{$("nom").value=$("nomCtl").value;save();});
+/* nömrə yazıb çıxanda yoxlanılır: ardıcıllıq pozulursa növbəti düzgün nömrə qoyulur */
+$("nomCtl").addEventListener("change",()=>{ const p=nomProblem(); if(p&&parseInt($("nomCtl").value,10)>0){ const nx=nextNumber($("dateCtl").value.slice(0,4)); toast(p); $("nomCtl").value=$("nom").value=String(nx); save(); } });
 $("dateCtl").addEventListener("input",()=>{$("dateTxt").value=isoToTxt($("dateCtl").value);save();});
 $("qeyd").addEventListener("change",()=>{$("qeydBlock").hidden=!$("qeyd").checked;save();});
 $("sheet").addEventListener("keydown",e=>{
@@ -630,12 +632,16 @@ $("sheet").addEventListener("focusin",e=>{
 });
 $("newBtn").addEventListener("click",()=>{render(blank($("nom").value));aClear();toast("Mallar siyahısı təmizləndi");});
 /* Növbəti nömrə: bu ilin ən böyük nömrəsi + 1; yeni ildə 1-dən başlayır */
-function nextNumber(){
-  const y=String(new Date().getFullYear());
-  let max=0; (typeof KROWS!=="undefined"?KROWS:[]).forEach(x=>{ if(x[2].slice(0,4)===y&&x[1]>max) max=x[1]; });
-  const cur=parseInt($("nom").value,10), cd=$("dateCtl").value;
-  if(cur&&cd&&cd.slice(0,4)===y&&cur>max) max=cur;
-  return max+1;
+/* Nömrələr ardıcıl olmalıdır: həmin ildə saxlanmış ən böyük nömrə + 1-dən böyük nömrə olmaz */
+function maxNumber(y){ let max=0; (typeof KROWS!=="undefined"?KROWS:[]).forEach(x=>{ if(x[2].slice(0,4)===y&&x[1]>max) max=x[1]; }); return max; }
+function nextNumber(y){ return maxNumber(y||String(new Date().getFullYear()))+1; }
+/* düzgündürsə "" qaytarır, deyilsə xəbərdarlıq mətni */
+function nomProblem(){
+  const n=parseInt($("nom").value,10), d=$("dateCtl").value;
+  if(!n||n<1) return "Faktura nömrəsini yazın";
+  if(!d) return "";
+  const y=d.slice(0,4), nx=nextNumber(y);
+  return n>nx?("Nömrələr ardıcıl olmalıdır. "+y+"-"+yearSuffix(y)+" il üçün növbəti nömrə: "+nx):"";
 }
 $("nextBtn").addEventListener("click",()=>{const n=nextNumber();render(blank(n));aClear();toast("Yeni faktura № "+n);});
 
@@ -692,7 +698,7 @@ window.addEventListener("beforeprint",()=>{oldTitle=document.title; document.tit
 window.addEventListener("afterprint",()=>{document.title=oldTitle;});
 function doPrint(){ if(!(curTotal()>0)){ toast("Məbləğ 0-dır, sənəd çap edilə bilməz"); return; } if(!isSaved()){ toast("Əvvəlcə yadda saxlayın, sonra çap edə bilərsiniz"); return; } fitPage(); window.print(); }
 /* Drive qoşulana qədər: yadda saxla = Köçürmələrə yaz + PDF kimi saxlama pəncərəsi */
-function saveLocal(){ if(!(curTotal()>0)){ toast("Məbləğ 0-dır, sənəd saxlanıla bilməz"); return; } kUpsert(); markSaved(); toast("Yadda saxlanıldı, Köçürmələrə əlavə olundu"); fitPage(); window.print(); }
+function saveLocal(){ if(!(curTotal()>0)){ toast("Məbləğ 0-dır, sənəd saxlanıla bilməz"); return; } { const p=nomProblem(); if(p){ toast(p); return; } } kUpsert(); markSaved(); toast("Yadda saxlanıldı, Köçürmələrə əlavə olundu"); fitPage(); window.print(); }
 $("printBtn").addEventListener("click",doPrint);
 /* ---- Google Drive-a avtomatik saxlama (şirkətin öz Drive-ı) ---- */
 function loadScript(src){return new Promise((ok,no)=>{const s=document.createElement("script");s.src=src;s.onload=ok;s.onerror=()=>no(new Error("Kitabxana yüklənmədi"));document.head.appendChild(s);});}
@@ -712,6 +718,7 @@ async function makePdfBase64(){
 }
 function fileName(){ if(TAB==="P"||TAB==="A") return pdfName(); return ($("nom").value.trim()+" №-li Hesab  Faktura,"+$("buyer").value.trim()).replace(/[\\/:*?"<>|]/g," ").trim(); }
 async function saveToDrive(){
+  { const p=nomProblem(); if(p){ toast(p); $("nomCtl").focus(); return; } }
   if(!(curTotal()>0)){ toast("Məbləğ 0-dır, sənəd saxlanıla bilməz"); return; }
   if(!SESSION){ toast("Əvvəlcə daxil olun"); return; }
   if(!$("buyer").value.trim()){ toast("Əvvəlcə müştərini seçin"); return; }
