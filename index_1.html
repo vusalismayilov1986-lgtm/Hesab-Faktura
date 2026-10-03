@@ -1,0 +1,1295 @@
+<!doctype html>
+<html lang="az">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Hesab Faktura</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gelasio:ital,wght@0,400;0,600;0,700;1,400&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+/* Layout: control bar on top, the invoice as an A4 sheet below, edited in place */
+:root{
+  --bg:#e9ebee; --fg:#1d2430; --muted:#5b6574; --panel:#ffffff; --line:#c9ced6; --accent:#1f5f8b;
+  --paper:#ffffff; --ink:#000000; --head:#d9d9d9; --edit:#fff7d6;
+  --ui:"IBM Plex Sans",system-ui,sans-serif;
+  --doc:"Palatino Linotype",Palatino,"Book Antiqua","Gelasio",Georgia,serif;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#171b21;--fg:#e4e8ee;--muted:#9aa4b2;--panel:#222831;--line:#3a424e;--accent:#6fb0dc;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#171b21;--fg:#e4e8ee;--muted:#9aa4b2;--panel:#222831;--line:#3a424e;--accent:#6fb0dc;color-scheme:dark}
+body{background:var(--bg);color:var(--fg);font-family:var(--ui);padding:16px}
+.bar{max-width:794px;margin:0 auto 14px;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:12px 14px;display:flex;flex-wrap:wrap;gap:10px 16px;align-items:flex-end}
+.bar label{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--muted);letter-spacing:.02em;min-width:0}
+.bar select,.bar input[type=number],.bar input[type=date]{font:inherit;font-size:14px;color:var(--fg);background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:6px 8px;max-width:100%}
+.bar select{min-width:min(280px,100%)}
+.bar .chk{flex-direction:row;align-items:center;gap:6px;font-size:13px;color:var(--fg);padding-bottom:7px}
+.bar button{font:inherit;font-size:13px;font-weight:500;border:1px solid var(--line);background:var(--bg);color:var(--fg);border-radius:6px;padding:7px 12px;cursor:pointer}
+.bar button:disabled{opacity:.45;cursor:not-allowed}
+.bar button.pri{background:var(--accent);border-color:var(--accent);color:#fff}
+.bar button:focus-visible,.bar select:focus-visible,.bar input:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.hint{max-width:794px;margin:0 auto 10px;font-size:12px;color:var(--muted)}
+.scroll{overflow-x:auto;padding-bottom:8px}
+.sheet{width:794px;min-height:1123px;margin:0 auto;background:var(--paper);color:var(--ink);font-family:var(--doc);font-size:14px;padding:70px 34px 30px;box-shadow:0 2px 14px rgba(0,0,0,.18);box-sizing:border-box}
+.sheet input{font:inherit;color:inherit;background:transparent;border:0;padding:0 2px;width:100%;box-sizing:border-box}
+.sheet input[readonly]{pointer-events:none;cursor:default;background:transparent!important;outline:0!important}
+#rows tr.svc select{pointer-events:none}
+.sheet select.un:disabled{cursor:not-allowed;background:transparent;outline:0}
+.sheet input:disabled{cursor:not-allowed;background:transparent;color:inherit}
+.sheet select.un{font:inherit;color:inherit;background:transparent;border:0;width:100%;padding:0;appearance:none;-webkit-appearance:none;text-align:center;text-align-last:center;cursor:pointer}
+.sheet select.un:hover,.sheet select.un:focus{background:transparent;outline:0}
+.sheet input:hover,.sheet input:focus{outline:0;background:transparent}
+#rows td:focus-within{background:#e3eefa;box-shadow:inset 0 0 0 1px #8fb4dc}
+.sheet.pdfmode #rows td{background:transparent!important;box-shadow:none!important}
+.sheet.compact{padding-top:40px}.sheet.compact .title{margin:4px 0 28px}
+.title{text-align:center;font-weight:700;font-size:15.5px;margin:12px 0 44px;display:flex;justify-content:center;gap:10px;align-items:baseline}
+.title input{width:70px;font-weight:700;text-align:left}
+.info{display:grid;grid-template-columns:150px 1fr 118px 125px;row-gap:3px;column-gap:6px;font-size:14px}
+.info .r{text-align:left}
+.info>div{white-space:nowrap}
+table.items{width:100%;border-collapse:collapse;margin-top:24px;font-size:13px;table-layout:fixed}
+table.items th{background:var(--head);border:1px solid #000;font-weight:700;padding:3px 2px;font-size:13.5px;line-height:1.1}
+table.items td{border:1px solid #000;height:22px;padding:0 2px}
+table.items td.c{text-align:center}
+table.items td.c input{text-align:center}
+table.items td.num{text-align:center}
+table.items tr.total td{font-weight:700;font-size:14px;padding:2px 3px}
+.bank{display:grid;grid-template-columns:150px 1fr;white-space:nowrap;row-gap:3px;margin-top:38px;font-size:13.5px}
+.note{font-style:italic;font-size:12px;line-height:1.25;margin-top:16px;text-align:justify}
+.sign{display:grid;grid-template-columns:260px 160px 1fr;align-items:end;margin-top:46px;font-size:14px}
+.sign .it{font-style:italic}
+.sign .line{text-align:right}
+.sign2{display:grid;grid-template-columns:260px 1fr 190px;align-items:end;margin-top:42px;font-weight:700;font-size:14px}
+.sign2 .mid{text-align:left;padding-left:2px;white-space:nowrap}
+.sign2 .ln{border-bottom:1px solid #000;height:16px}
+.my{position:relative;height:20px;font-weight:700;margin:22px 0 36px}
+.my span,#sheetA .amy span{position:absolute;top:0;white-space:nowrap}
+.sheet.compact .my{margin-bottom:18px}
+.sheet{display:flex;flex-direction:column}
+.foot{margin-top:auto;border-top:1px dashed #000;padding-top:6px;display:grid;grid-template-columns:150px 1fr;row-gap:3px;font-size:9.5px}
+.foot a{color:#1a3c8f}
+.rowtools{display:flex;gap:8px;justify-content:flex-end;max-width:794px;margin:8px auto 0}
+.toast{position:fixed;left:50%;bottom:calc(18px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--fg);color:var(--bg);padding:8px 14px;border-radius:6px;font-size:13px}
+@media (max-width:600px){.bar{padding:10px}.bar select{min-width:0;width:100%}.bar label.cust{flex:1 1 100%}}
+/* Protokol vərəqi */
+.tabs{display:flex;gap:4px;max-width:794px;margin:0 auto 10px}
+.tabs button{font:inherit;font-size:13px;font-weight:600;border:1px solid var(--line);background:var(--panel);color:var(--muted);border-radius:6px;padding:7px 14px;cursor:pointer}
+.tabs button[aria-selected="true"]{background:var(--accent);border-color:var(--accent);color:#fff}
+.psheet{font-size:16px;padding:96px 40px 30px}
+.psheet .ptitle{text-align:center;font-weight:700;margin:0 0 22px}
+.psheet .pcity{display:flex;justify-content:space-between;align-items:flex-end;font-weight:700;margin-bottom:22px}
+.psheet .pcity span:last-child{padding-top:14px}
+.psheet .pintro{margin:0}
+.psheet .ptext{margin:0 0 30px;text-align:justify;line-height:1.25}
+.psheet table{width:100%;border-collapse:collapse;table-layout:fixed}
+.psheet th{background:var(--head);border:1px solid #000;font-weight:700;line-height:1.1;height:49px;padding:0 2px}
+.psheet td{border:1px solid #000;height:24px;padding:0 3px;text-align:center}
+.psheet td.l{text-align:left}
+.psheet tr.ptot td{height:33px;font-weight:700}
+.psheet .ptottxt{position:relative;left:-14px}
+.psheet .pnotes{margin:18px 0 0;text-align:justify;line-height:2.05}
+.psheet .psign{display:grid;grid-template-columns:62% 38%;margin-top:64px;font-weight:700;line-height:1.25;align-items:end}
+.psheet .psign .who{display:flex;flex-direction:column;gap:10px}
+.psheet .psign .nm{display:flex;align-items:flex-end;gap:22px;white-space:nowrap}
+.psheet .psign .ln{flex:1;border-bottom:1px solid #000;height:1px;margin-bottom:4px;max-width:200px}
+.psheet .psign .who:first-child{padding-right:60px}
+.psheet .psign .right .nm .ln{max-width:none}
+.psheet .pmy{position:relative;height:24px;margin-top:40px;font-weight:700}
+.psheet .pmy span{position:absolute;top:0}
+.psheet .pmy span:first-child{left:44%}
+.psheet .pmy span:last-child{left:86%}
+/* ---- Akt vərəqi ---- */
+#sheetA{font-size:13.3px;padding:40px 44px 30px}
+#sheetA input,#sheetA select{font:inherit;color:inherit;background:transparent;border:0;padding:0 2px;width:100%;outline:0}
+#sheetA select{appearance:none;-webkit-appearance:none;text-align:center;text-align-last:center;cursor:pointer}
+#sheetA input[readonly]{pointer-events:none}
+#sheetA input:disabled,#sheetA select:disabled{cursor:not-allowed;color:inherit}
+#sheetA td:focus-within{background:#e3eefa;box-shadow:inset 0 0 0 1px #8fb4dc}
+#sheetA .atitle{text-align:center;font-weight:700;font-size:16px;margin:0 0 40px}
+#sheetA table{width:100%;border-collapse:collapse;table-layout:fixed}
+#sheetA td,#sheetA th{border:1px solid #000;height:24px;padding:0 3px;vertical-align:middle;overflow:hidden;white-space:nowrap}
+#sheetA th{background:var(--head);font-weight:700;text-align:center;line-height:1.1}
+#sheetA .c{text-align:center}
+#sheetA .l{text-align:left}
+#sheetA .r{text-align:right}
+#sheetA .i{font-style:italic}
+#sheetA .b{font-weight:700}
+#sheetA .gap{height:16px}
+#sheetA .t-top td{height:24px}
+#sheetA .t-car td{height:26px}
+#sheetA .t-srv th{height:31px}
+#sheetA .t-srv td.ltr{font-style:italic;text-align:center;vertical-align:top}
+#sheetA .t-prt th{height:34px;white-space:normal}
+#sheetA tr.sum td{font-style:italic}
+#sheetA .sumtxt{position:relative;left:-50px}
+#sheetA .grandtxt{left:-8px}
+#sheetA tr.grand td{border:0;font-weight:700;height:26px}
+#sheetA tr.grand .big{font-size:14.6px}
+#sheetA .anote{font-style:italic;margin:4px 0 0;line-height:1.25;white-space:normal}
+#sheetA .asign{display:grid;grid-template-columns:24.6% 43% 32.4%;align-items:end;font-size:16px;margin-top:56px}
+#sheetA .asign .nm{text-align:left;padding-left:12%}
+#sheetA .asign .nm input{text-align:left;padding:0}
+#sheetA .asign .ln{border-bottom:1px solid #000;height:1px;margin:0 14% 2px 6%}
+#sheetA .asign2{margin-top:44px}
+#sheetA .amy{position:relative;height:22px;font-weight:700;font-size:16px;margin-top:22px}
+/* ---- Köçürmələr ---- */
+body.tabK .bar,body.tabK .tabs,body.tabK .hint{max-width:1000px;box-sizing:border-box}
+body.tabK .bar,body.tabK .hint{display:none}
+.kpanel{box-sizing:border-box;width:min(1000px,100%);margin:0 auto;background:var(--panel);color:var(--fg);border:1px solid var(--line);border-radius:8px;padding:14px;font-family:var(--ui);font-size:13px;display:flex;flex-direction:column;gap:12px}
+.kfilters{display:flex;flex-wrap:wrap;gap:10px 14px;align-items:flex-end}
+.kfilters label{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--muted)}
+.kfilters select,.kfilters input{font:inherit;font-size:13px;color:var(--fg);background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:6px 8px}
+.kfilters button{font:inherit;font-size:13px;font-weight:500;border:1px solid var(--accent);background:var(--accent);color:#fff;border-radius:6px;padding:7px 12px;cursor:pointer;margin-left:auto}
+.ksum{display:flex;flex-wrap:wrap;gap:10px}
+.ksum div{flex:1 1 180px;border:1px solid var(--line);border-radius:8px;padding:10px 12px;background:var(--bg)}
+.ksum span{display:block;font-size:12px;color:var(--muted)}
+.ksum b{font-size:18px;font-variant-numeric:tabular-nums}
+.ksum .late b{color:#b42318}
+.kwrap{overflow:auto;max-height:70vh;border:1px solid var(--line);border-radius:6px;width:fit-content;max-width:100%}
+.ktable{width:auto;border-collapse:collapse;font-variant-numeric:tabular-nums}
+.ktable th{position:sticky;top:0;background:var(--bg);text-align:center;font-weight:600;font-size:12px;color:var(--muted);padding:6px 8px;border-bottom:1px solid var(--line);white-space:normal;vertical-align:middle;text-align:center;line-height:1.25}
+.ktable td{padding:5px 8px;border-bottom:1px solid var(--line);white-space:nowrap}
+.ktable td{text-align:center}
+.ktable td:nth-child(2){text-align:left}
+.ktable td select,.ktable td input{text-align:center;text-align-last:center}
+.ktable select,.ktable input{font:inherit;color:var(--fg);background:transparent;border:1px solid transparent;border-radius:4px;padding:3px 4px}
+.ktable select,.kfilters select{background-color:var(--panel)}
+.ktable select option,.kfilters select option,.bar select option{color:#1d2430;background:#ffffff}
+.ktable select:hover,.ktable input:hover,.ktable select:focus,.ktable input:focus{border-color:var(--line);outline:0}
+.ktable tr.cancel td select{text-decoration:none}
+.ktable .late{color:#b42318;font-weight:600}
+.ktable tr.edited td{color:#1f9d55;font-weight:600}
+.ktable tr.edited select,.ktable tr.edited input{color:#1f9d55}
+.ktable tr.edited td:first-child{box-shadow:inset 3px 0 0 #1f9d55}
+.ktable tr.lateRow td,.ktable tr.lateRow select,.ktable tr.lateRow input{color:#b42318}
+.ktable button{font:inherit;font-size:12px;border:1px solid var(--line);background:var(--bg);color:var(--fg);border-radius:5px;padding:3px 8px;cursor:pointer}
+.ktable tr.cancel td{text-decoration:none}
+.ktable tr.cancel .eqin{color:#b42318;font-weight:600}
+.ktable tr.cancel td{opacity:.45}
+.ktable tr.cancel td:nth-child(8){opacity:1}
+.ktable tr.cancel select:disabled{cursor:not-allowed}
+.ktable tr.cancel td:not(:nth-child(8)){text-decoration:line-through}
+.kmenu{position:fixed;z-index:30;background:var(--panel);border:1px solid var(--line);border-radius:6px;box-shadow:0 6px 18px rgba(0,0,0,.18);padding:4px}
+.kmenu button{font:inherit;font-size:13px;border:0;background:transparent;color:#b42318;font-weight:600;padding:6px 12px;cursor:pointer;border-radius:4px;white-space:nowrap}
+.kmenu button:hover,.kmenu button:focus-visible{background:var(--bg)}
+.ktable input.eqin{width:17ch;border:1px solid var(--line);background:var(--bg);border-radius:5px;padding:4px 6px;font-variant-numeric:tabular-nums;letter-spacing:.02em}
+.ktable input.eqin::placeholder{color:var(--muted);font-size:12px}
+.ktable .del{border:0;background:transparent;color:var(--muted);font-size:15px;padding:0 4px}
+.ktable td.nomlink{cursor:pointer;user-select:none;text-decoration:underline dotted;text-underline-offset:3px}
+.ktable td.nomlink:hover{color:var(--accent)}
+.kempty{padding:20px;text-align:center;color:var(--muted)}
+
+/* ===== giriş ===== */
+body.locked>:not(#login):not(.toast){display:none!important}
+#login{position:fixed;inset:0;display:none;align-items:center;justify-content:center;padding:16px;background:var(--bg);z-index:50}
+body.locked #login{display:flex}
+#login form{width:min(360px,100%);background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:22px;display:flex;flex-direction:column;gap:12px;font-family:var(--ui)}
+#login h1{margin:0 0 4px;font-size:20px;font-weight:600}
+#login p{margin:0;font-size:13px;color:var(--muted)}
+#login label{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--muted)}
+#login input{font:inherit;font-size:15px;color:var(--fg);background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:9px 10px}
+#login input:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+#login button{font:inherit;font-size:14px;font-weight:600;border:1px solid var(--accent);background:var(--accent);color:#fff;border-radius:6px;padding:10px;cursor:pointer}
+#login button:disabled{opacity:.6;cursor:wait}
+#loginErr{color:#b42318!important;min-height:1.2em}
+#login.busy form{display:none}
+#login .wait{display:none;font-family:var(--ui);color:var(--muted)}
+#login.busy .wait{display:block}
+.tabs{align-items:center;flex-wrap:wrap}
+.tabs .me{margin-left:auto;display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted);font-family:var(--ui)}
+.tabs .me b{color:var(--fg);font-weight:600}
+.tabs .me button{font-weight:500;padding:5px 10px}
+#sync.err{color:#b42318;cursor:pointer;text-decoration:underline}
+#sync.ok{color:#1f9d55}
+/* ===== ayarlar ===== */
+.spanel h2{margin:4px 0 0;font-size:15px}
+.sgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:10px 14px}
+.sgrid label,.spass label{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--muted)}
+.spanel input,.spanel textarea{font:inherit;font-size:13px;color:var(--fg);background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:6px 8px;width:100%;min-width:0}
+.spanel textarea{resize:vertical;min-height:34px}
+.spanel button{font:inherit;font-size:13px;font-weight:500;border:1px solid var(--line);background:var(--bg);color:var(--fg);border-radius:6px;padding:7px 12px;cursor:pointer}
+.spanel button.pri{background:var(--accent);border-color:var(--accent);color:#fff}
+body.noakt>.hint{display:none}
+.spanel .schk{flex-direction:row;align-items:center;gap:8px;font-size:13px;color:var(--fg);padding-top:18px}
+.spanel .schk input{width:auto}
+.sact{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.ctable{width:100%;border-collapse:collapse;font-size:13px}
+.ctable th{font-size:12px;font-weight:600;color:var(--muted);text-align:left;padding:4px;border-bottom:1px solid var(--line)}
+.ctable td{padding:3px 4px;border-bottom:1px solid var(--line);vertical-align:top}
+.ctable td:last-child{width:28px;text-align:center}
+.ctable .del{border:0;background:transparent;color:var(--muted);font-size:15px;padding:4px}
+.cwrap{overflow-x:auto}
+.ctable input,.ctable textarea{min-width:90px}
+.ctable td:first-child input{min-width:230px}
+.ctable td:nth-child(6) input{min-width:200px}
+.spass{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px 14px;align-items:end}
+@page{size:A4;margin:0}
+@media print{html,body{margin:0}body{background:#fff;padding:0}.bar,.hint,.rowtools,.toast,.tabs,.kpanel{display:none!important}.scroll{overflow:visible;padding:0}.sheet{box-shadow:none;margin:0 auto}.sheet input:hover,.sheet input:focus{background:transparent;outline:0}#rows tr.pempty{display:none}#rows td{background:transparent!important;box-shadow:none!important}body.zero .scroll{display:none!important}body.zero::before{content:"Ödəniləcək məbləğ 0-dır, faktura çap edilə bilməz";display:block;padding:60px 40px;font:600 18px/1.4 sans-serif;text-align:center}}
+.sheet.pdfmode #rows tr.pempty{display:none}
+#sheetA.pdfmode td{background:transparent!important;box-shadow:none!important}
+#sheetA.pdfmode #prtRows tr.pempty{display:none}
+@media print{#prtRows tr.pempty{display:none}}
+@media print{#sheetA td{background:transparent!important;box-shadow:none!important}}
+.sheet.pdfmode input,.sheet.pdfmode select{background:transparent!important;outline:0!important}
+.sheet.pdfmode{box-shadow:none}
+body.zero::before{content:none}
+@media print{body.zero::before{content:"Ödəniləcək məbləğ 0-dır, sənəd çap edilə bilməz"}body.unsaved .scroll{display:none!important}body.unsaved::before{content:"Sənəd yadda saxlanılmayıb. Əvvəlcə \"Yadda saxla\" düyməsini basın.";display:block;padding:60px 40px;font:600 18px/1.4 sans-serif;text-align:center}}
+</style>
+</head>
+<body class="locked">
+<div id="login">
+  <form id="loginForm" autocomplete="on">
+    <h1>Hesab Faktura</h1>
+    <p>Şirkətinizin istifadəçi adı və şifrəsi ilə daxil olun.</p>
+    <label>İstifadəçi adı<input id="lUser" name="username" autocomplete="username" autocapitalize="none" spellcheck="false" required></label>
+    <label>Şifrə<input id="lPass" name="password" type="password" autocomplete="current-password" required></label>
+    <p id="loginErr" role="alert"></p>
+    <button id="lBtn" type="submit">Daxil ol</button>
+  </form>
+  <div class="wait">Məlumatlar yüklənir…</div>
+</div>
+
+<div class="bar">
+  <label class="cust">Hesabı alan şirkət
+    <select id="cust"></select>
+  </label>
+  <label>Faktura №
+    <input id="nomCtl" type="number" min="1" style="width:90px">
+  </label>
+  <label>Tarix
+    <input id="dateCtl" type="date">
+  </label>
+  <label class="chk"><input id="qeyd" type="checkbox" checked> Təhvil qeydi</label>
+  <button id="newBtn" type="button">Yeni faktura</button>
+  <button id="nextBtn" class="pri" type="button">Növbəti № ilə yeni</button>
+  <button id="saveBtn" class="pri" type="button">Yadda saxla (PDF)</button>
+  <button id="printBtn" type="button">Çap et</button>
+</div>
+<div class="tabs" role="tablist">
+  <button id="tabA" type="button" role="tab" aria-selected="true">Akt</button>
+  <button id="tabF" type="button" role="tab" aria-selected="false">Hesab Faktura</button>
+  <button id="tabP" type="button" role="tab" aria-selected="false">Protokol</button>
+  <button id="tabK" type="button" role="tab" aria-selected="false">Köçürmələr</button>
+  <button id="tabS" type="button" role="tab" aria-selected="false">Ayarlar</button>
+  <span class="me"><span id="sync" role="status"></span><b id="whoName"></b><button id="logoutBtn" type="button">Çıxış</button></span>
+</div>
+<p class="hint">Malları hesab fakturada və ya aktda yazın — hər ikisində eyni görünür. Aktdakı xidmətlərin cəmi fakturaya "Xidmət haqqı (usta)" sətri kimi düşür.</p>
+
+<div class="scroll">
+<div class="sheet" id="sheet">
+  <div class="title"><span>Hesab Faktura&nbsp; №</span><input id="nom" aria-label="Faktura nömrəsi"></div>
+
+  <div class="info">
+    <div>Hesabı təqdim edən:</div><div><input id="seller"></div>
+    <div>Tarix:</div><div><input id="dateTxt"></div>
+    <div>VÖEN:</div><div><input id="sellerTin"></div>
+    <div>Müqavilə №:</div><div><input id="contract"></div>
+    <div>Hesabı alan:</div><div><input id="buyer"></div>
+    <div>Müqavilə tarixi:</div><div><input id="contractDate"></div>
+    <div>VÖEN:</div><div><input id="buyerTin"></div>
+    <div>Valyuta:</div><div><input id="cur" value="AZN"></div>
+  </div>
+
+  <table class="items">
+    <colgroup><col style="width:5.5%"><col style="width:41%"><col style="width:9.5%"><col style="width:10%"><col style="width:11.5%"><col style="width:13.5%"></colgroup>
+    <thead><tr><th>№</th><th>Mallar (İşlər Xidmətlər)</th><th>Ölçü vahidi</th><th>Miqdarı</th><th>Qiymət</th><th>Məbləğ</th></tr></thead>
+    <tbody id="rows"></tbody>
+    <tbody><tr class="total"><td style="border-right:0"></td><td colspan="5" id="totWrap" style="border-left:0;padding-left:0">Ödəniləcək ümumi məbləğ&nbsp;&nbsp;&nbsp;<span id="totWords"></span></td></tr></tbody>
+  </table>
+
+  <div class="bank">
+    <div>Bank</div><div><input id="b1"></div>
+    <div>Bankın VÖEN-i</div><div><input id="b2"></div>
+    <div>Hesab</div><div><input id="b3"></div>
+    <div>Müxbirhesab:</div><div><input id="b4"></div>
+    <div>Kod</div><div><input id="b5"></div>
+    <div>SWIFT</div><div><input id="b6"></div>
+  </div>
+
+  <div id="qeydBlock">
+    <p class="note">Qeyd: Şirkətin nümayəndəsi olaraq&nbsp; hesab fakturada qeyd olunan Malları (ehtiyyat hissələrini) təhvil aldım, nəzərdən keçirdim və heç bir etirazım olmadığını aşağıdakı imzamla&nbsp; təsdiq edirəm.</p>
+    <div class="sign">
+      <div class="it">Hesab fakturanı və Malları təhvil aldım</div>
+      <div class="it"><input id="receiver" style="font-style:italic"></div>
+      <div class="line">___________________________</div>
+    </div>
+  </div>
+
+  <div class="sign2">
+    <div id="signerLabel">Fiziki şəxs</div>
+    <div class="mid" id="signerName"></div>
+    <div class="ln"></div>
+  </div>
+  <div class="my"><span id="myF" style="right:80px">M.Y</span></div>
+
+  <div class="foot">
+    <div>Ünvan</div><div id="fAddr"></div>
+    <div>Əlaqə nömrəsi</div><div id="fPhone"></div>
+    <div>E-mail</div><div><a id="fEmail" href="#"></a></div>
+  </div>
+</div>
+<div class="sheet psheet" id="sheetP" hidden>
+  <div class="ptitle">QİYMƏT RAZILAŞMASI PROTOKOLU</div>
+  <div class="pcity"><span>Bakı şəhəri</span><span id="pDate"></span></div>
+  <p class="pintro">Biz aşağıda imza edənlər:</p>
+  <p class="ptext" id="pText"></p>
+  <table>
+    <colgroup><col style="width:7.14%"><col style="width:14.44%"><col style="width:16.33%"><col style="width:22.74%"><col style="width:8.16%"><col style="width:9.91%"><col style="width:10.21%"><col style="width:11.07%"></colgroup>
+    <thead><tr><th>№</th><th colspan="3">Malın adı</th><th>Ölçü vahidi</th><th>Miqdarı</th><th>Qiymət (AZN)</th><th>Məbləğ (AZN)</th></tr></thead>
+    <tbody id="pRows"></tbody>
+    <tbody><tr class="ptot"><td style="border-right:0"></td><td colspan="7" class="l" style="border-left:0;padding-left:0">Ümumi məbləğ&nbsp;&nbsp;&nbsp;<span id="pSum"></span>&nbsp;<span id="pTotal"></span></td></tr></tbody>
+  </table>
+  <div class="pnotes">1.Qiymət razılaşması protokolu, hesablaşma üçün əsas sayılır və biri Satıcıda, digəri isə Alıcıda saxlanılmaqla, iki nüsxədə tərtib edilir və imzalandığı gündən qüvvəyə minir<br>2.Təqdim edilmiş malların dəyəri mal “Alıcı”ya&nbsp; <b>E-qaimə və ya Hesab Faktura göndərildikdən</b> sonra 15 (on beş)&nbsp; günü ərzində “Alıcı” tərəfindən&nbsp; “Satıcı”ya ödəniləcəkdir.</div>
+  <div class="psign">
+    <div class="who"><span id="pSignerLabel">Fiziki şəxs</span><span class="nm"><span id="pSeller"></span><span class="ln"></span></span></div>
+    <div class="who right" id="pBuyerBox"><span id="pDirTitle"></span><span class="nm"><span id="pDirName"></span><span class="ln"></span></span></div>
+  </div>
+  <div class="pmy"><span id="myP1">M.Y</span><span id="myP2">M.Y</span></div>
+</div>
+<div class="sheet" id="sheetA" hidden>
+  <div class="atitle" id="aTitle">AVTOMOBİLİN TƏMİRİ AKTI</div>
+
+  <table class="t-top">
+    <colgroup><col style="width:14.97%"><col style="width:13.98%"><col style="width:5.92%"><col style="width:17.8%"><col style="width:10.87%"><col style="width:8.34%"><col style="width:15.25%"><col style="width:12.87%"></colgroup>
+    <tr>
+      <td>Aktın tarixi</td><td colspan="2" id="aDate" class="c"></td>
+      <td style="border-right:0">Hesab fakturanın №</td><td class="l" id="aNom" style="border-left:0"></td>
+      <td colspan="2">Hesab fakturanın tarixi</td><td id="aDate2"></td>
+    </tr>
+  </table>
+  <div class="gap"></div>
+
+  <table class="t-car">
+    <colgroup><col style="width:14.97%"><col style="width:13.98%"><col style="width:5.92%"><col style="width:17.8%"><col style="width:10.87%"><col style="width:8.34%"><col style="width:15.25%"><col style="width:12.87%"></colgroup>
+    <tr><td colspan="3" class="c">Avtomobil haqqında məlumatlar</td><td colspan="5" class="c">Avtomobil sahibi haqqında məlumatlar</td></tr>
+    <tr><td>Marka ,model</td><td colspan="2"><input id="carModel" class="cf" aria-label="Marka, model"></td><td>Ad/Soyad (mmc)</td><td colspan="4" class="c" id="oName"></td></tr>
+    <tr><td>Şassi №</td><td colspan="2"><input id="carVin" class="cf" aria-label="Şassi nömrəsi"></td><td>Müqavilə №</td><td colspan="4" class="c" id="oContract"></td></tr>
+    <tr><td>Km göstəricisi</td><td colspan="2"><input id="carKm" class="cf" inputmode="numeric" style="text-align:center" aria-label="Km göstəricisi"></td><td>VÖEN</td><td colspan="4" class="c" id="oTin"></td></tr>
+    <tr><td>Qeydiyyat nişanı</td><td colspan="2"><input id="carPlate" class="cf" style="text-align:center" aria-label="Qeydiyyat nişanı"></td><td>Telefon və e-mail</td><td colspan="4" class="c" id="oPhone"></td></tr>
+  </table>
+  <div class="gap"></div>
+
+  <table class="t-srv">
+    <colgroup><col style="width:14.97%"><col style="width:13.98%"><col style="width:5.92%"><col style="width:17.8%"><col style="width:10.87%"><col style="width:8.34%"><col style="width:15.25%"><col style="width:12.87%"></colgroup>
+    <thead><tr><th>Sıra</th><th colspan="5">Avtomobildə görülən işlər(xidmətlər)</th><th>İçraçı (usta)</th><th>Məbləğ</th></tr></thead>
+    <tbody id="srvRows"></tbody>
+    <tbody><tr class="sum"><td style="border-right:0"></td><td colspan="7" class="l" style="border-left:0;padding-left:0">Xidmətin cəmi məbləği&nbsp;&nbsp;&nbsp;<span id="srvSum"></span>&nbsp;<span id="srvWords"></span></td></tr></tbody>
+  </table>
+
+  <table class="t-prt">
+    <colgroup><col style="width:14.97%"><col style="width:13.98%"><col style="width:5.92%"><col style="width:17.8%"><col style="width:10.87%"><col style="width:8.34%"><col style="width:15.25%"><col style="width:12.87%"></colgroup>
+    <thead><tr><th>№</th><th colspan="3">İstifadə olunan ehtiyyat hissələri və Mallar</th><th>Ölçü vahidi</th><th>Miqdarı</th><th>Qiymət</th><th>Məbləğ</th></tr></thead>
+    <tbody id="prtRows"></tbody>
+    <tbody>
+      <tr class="sum"><td style="border-right:0"></td><td colspan="7" class="l" style="border-left:0;padding-left:0">Satışın cəmi məbləği&nbsp;&nbsp;&nbsp;<span id="prtSum"></span>&nbsp;<span id="prtWords"></span></td></tr>
+      <tr class="grand"><td></td><td colspan="7" class="l" style="padding-left:0"><span class="big">Yekun ödəniləcək məbləğin cəmi</span>&nbsp;&nbsp;&nbsp;<span id="allSum"></span>&nbsp;&nbsp;&nbsp;<span id="allWords"></span></td></tr>
+    </tbody>
+  </table>
+
+  <p class="anote">Qeyd:Avtomobildə görülən təmir işlərini və dəyişdirilən ehtiyyat hissələrini avtomobilin məxsus olduğu şirkətin nümayəndəsi olaraq nəzərdən keçirdim və heç bir etirazım olmadığını aşağıdakı imzamla&nbsp; təsdiq edirəm.</p>
+
+  <div class="asign"><div>Təhvil alan</div><div class="nm"><input id="aReceiver" aria-label="Təhvil alan"></div><div class="ln"></div></div>
+  <div class="asign asign2"><div>Təhvil verən</div><div class="nm"><input id="aGiver" aria-label="Təhvil verən"></div><div class="ln"></div></div>
+  <div class="amy"><span id="myA" style="left:75%">M.Y</span></div>
+</div>
+</div>
+<div class="kpanel" id="sheetK" hidden>
+  <div class="kfilters">
+    <label>Şirkət<select id="kFirm"></select></label>
+    <label>İl<select id="kYear"></select></label>
+    <label>Status<select id="kStatus"><option value="" selected>Ödənilməyib</option><option value="all">Hamısı</option><option>Ödənildi</option><option>Nağd ödənildi</option><option>Ləğv edildi</option></select></label>
+    <label>Axtar<input id="kSearch" type="search" placeholder="Faktura № və ya E-qaimə №"></label>
+    <button id="kExport" type="button">Excel kimi yüklə</button>
+  </div>
+  <div class="ksum">
+    <div><span>Cəmi borc məbləği</span><b id="kDebt">0 manat</b></div>
+    <div class="late"><span>Gecikən borc məbləğləri (15 gündən çox)</span><b id="kLate">0 manat</b></div>
+    <div><span>Göstərilən fakturalar</span><b id="kCount">0</b></div>
+  </div>
+  <div class="kwrap"><table class="ktable">
+    <thead><tr><th>Sıra №</th><th>Şirkət</th><th>№</th><th>Tarix</th><th>Satışın cəmi məbləği</th><th>Ödənişin statusu</th><th>Gün</th><th>E-qaimə №</th><th>SMS</th><th></th></tr></thead>
+    <tbody id="kRows"></tbody>
+  </table><div class="kmenu" id="kMenu" hidden><button type="button" id="kMenuBtn"></button></div><div class="kempty" id="kEmpty" hidden>Bu seçimə uyğun faktura yoxdur.</div></div>
+</div>
+<div class="kpanel spanel" id="sheetS" hidden>
+  <h2>Şirkət məlumatları</h2>
+  <p class="hint" style="margin:0;max-width:none">Bu məlumatlar fakturada, aktda və protokolda avtomatik yazılır.</p>
+  <div class="sgrid">
+    <label>Şirkətin adı (yuxarıda görünür)<input id="s_name"></label>
+    <label>Hesabı təqdim edən<input id="s_seller"></label>
+    <label>VÖEN<input id="s_sellerTin"></label>
+    <label>Bank<input id="s_b1"></label>
+    <label>Bankın VÖEN-i<input id="s_b2"></label>
+    <label>Hesab<input id="s_b3"></label>
+    <label>Müxbir hesab<input id="s_b4"></label>
+    <label>Kod<input id="s_b5"></label>
+    <label>SWIFT<input id="s_b6"></label>
+    <label>İmza yeri (məs. Fiziki şəxs, Direktor)<input id="s_signerLabel"></label>
+    <label>İmzalayan<input id="s_signer"></label>
+    <label>Təhvil alan (standart)<input id="s_receiver"></label>
+    <label>Ünvan<input id="s_address"></label>
+    <label>Əlaqə nömrəsi<input id="s_phone"></label>
+    <label>E-mail<input id="s_email"></label>
+    <label>SMS sonu (imza)<input id="s_smsSign"></label>
+    <label class="schk"><input type="checkbox" id="s_showAkt"> Akt bölməsini göstər</label>
+  </div>
+  <h2>Müştərilər</h2>
+  <div class="cwrap"><table class="ctable">
+    <thead><tr><th>Şirkətin adı</th><th>VÖEN</th><th>Müqavilə №</th><th>Müqavilə tarixi</th><th>Direktor (protokol üçün)</th><th>Telefon, e-mail</th><th>Aktın başlığı (boş = AVTOMOBİLİN TƏMİRİ AKTI)</th><th></th></tr></thead>
+    <tbody id="sCust"></tbody>
+  </table></div>
+  <div class="sact"><button id="sAdd" type="button">+ Müştəri əlavə et</button><span style="flex:1"></span><button id="sSave" class="pri" type="button">Ayarları yadda saxla</button></div>
+  <h2>Şifrəni dəyiş</h2>
+  <div class="spass">
+    <label>Köhnə şifrə<input id="pOld" type="password" autocomplete="current-password"></label>
+    <label>Yeni şifrə (ən az 6 simvol)<input id="pNew" type="password" autocomplete="new-password"></label>
+    <label>Yeni şifrə təkrar<input id="pNew2" type="password" autocomplete="new-password"></label>
+    <button id="pBtn" type="button">Şifrəni dəyiş</button>
+  </div>
+</div>
+<div class="toast" id="toast" hidden></div>
+
+<script>
+/* ================= GİRİŞ / ŞİRKƏT ================= */
+/* Saytda heç bir şirkət məlumatı yoxdur. Kataloq: sha256(istifadəçi adı) → həmin şirkətin öz Apps Script linki.
+   Giriş yoxlanışı və bütün məlumatlar şirkətin öz Google Drive-ındadır. */
+const DIRECTORY={
+  "840a7960754b39774a002761918304b711c46f7cd1cfa773cf9f73a6fdf0b769": "https://script.google.com/macros/s/AKfycbz1laySFObprfkyd7JyRxBKmuHoM91_SfFMMr5NiCE443kwlsurKZUz810ZpTvxjK4U/exec"   // 1-ci şirkət — Apps Script linki bura
+};
+const MIGRATE_FROM="840a7960754b39774a002761918304b711c46f7cd1cfa773cf9f73a6fdf0b769";  // köhnə brauzer məlumatları bu istifadəçiyə aiddir
+let CUSTOMERS=[], PROFILE={}, SESSION=null, LSP="hf_none_";
+const $=id=>document.getElementById(id);
+const ROWS=12, MAXROWS=21;   // 20 mal + 1 xidmət haqqı sətri
+let TOTAL=0;
+let AKT_TOTAL=0;
+function curTotal(){ return (typeof TAB!=="undefined"&&TAB==="A")?AKT_TOTAL:TOTAL; }
+function updateOutputButtons(){
+  if(typeof TAB!=="undefined"&&(TAB==="K"||TAB==="S")){ ["saveBtn","printBtn"].forEach(id=>{const b=$(id); if(b){b.disabled=true; b.title="Köçürmələr bölməsində çap yoxdur, Excel kimi yükləyin";}}); document.body.classList.remove("zero"); return; }
+  const zero=!(curTotal()>0), msg=zero?"Ödəniləcək məbləğ 0-dır, əvvəlcə məlumatları doldurun":"";
+  const unsaved=!zero&&!isSaved();
+  document.body.classList.toggle("zero",zero);
+  document.body.classList.toggle("unsaved",unsaved);
+  ["saveBtn","printBtn"].forEach(id=>{const b=$(id); if(!b||b.dataset.busy) return; b.disabled=zero; b.title=msg;});
+  const pb=$("printBtn"); if(pb&&!zero){ pb.disabled=unsaved; pb.title=unsaved?"Əvvəlcə yadda saxlayın, sonra çap edə bilərsiniz":""; }
+}
+/* Çap: Köçürmələrdə eyni şirkət, eyni faktura №, eyni məbləğ və eyni tarixli qeyd varsa olar */
+function isSaved(){
+  /* səhifə açılarkən Köçürmələr hələ yüklənməyibsə xəta verməsin */
+  try{ if(!Array.isArray(KROWS)) return false; }catch(_){ return false; }
+  if(!$("nom")) return false;
+  const nom=parseInt($("nom").value,10), firm=$("buyer").value.trim(), iso=$("dateCtl").value, cents=Math.round(TOTAL*100);
+  return KROWS.some(x=>x[1]===nom&&x[0]===firm&&x[2]===iso&&Math.round(x[3]*100)===cents);
+}
+function markSaved(){ updateOutputButtons(); }
+
+/* ---- number to Azerbaijani words (same tables as baza_summ) ---- */
+const ONES=["","bir","iki","üç","dörd","beş","altı","yeddi","səkkiz","doqquz"];
+const TENS=["","on","iyirmi","otuz","qırx","əlli","altmış","yetmiş","səksən","doxsan"];
+function tri(n){const h=Math.floor(n/100),t=Math.floor(n%100/10),o=n%10;const p=[];if(h)p.push(ONES[h]+" yüz");if(t)p.push(TENS[t]);if(o)p.push(ONES[o]);return p.join(" ");}
+function words(x){
+  const man=Math.floor(x+1e-9), q=Math.round((x-man)*100);
+  let s=[]; const mil=Math.floor(man/1e6), th=Math.floor(man%1e6/1000), r=man%1000;
+  if(mil)s.push(tri(mil)+" milyon"); if(th)s.push(tri(th)+" min"); if(r)s.push(tri(r));
+  const m=s.length?s.join(" "):"sıfır";
+  return m+" manat "+String(q).padStart(2,"0")+" qəpik";
+}
+function fmt(n){return Number.isInteger(n)?String(n):n.toFixed(2);}
+function num(v){v=String(v).replace(",",".").trim();return v===""?NaN:Number(v);}
+
+/* ---- rows ---- */
+function makeRow(d={}){
+  const tr=document.createElement("tr");
+  tr.innerHTML=`<td class="c n"></td><td><input class="nm"></td><td class="c"><select class="un" aria-label="Ölçü vahidi"><option value=""></option><option>ədəd</option><option>dəst</option><option>qram</option><option>litr</option></select></td><td class="c"><input class="qt" inputmode="decimal"></td><td class="c"><input class="pr" inputmode="decimal"></td><td class="num am"></td>`;
+  tr.querySelector(".nm").value=d.nm||""; {const u=tr.querySelector(".un");if(d.un&&![...u.options].some(o=>o.value===d.un))u.add(new Option(d.un,d.un));u.value=d.un||"";}
+  tr.querySelector(".qt").value=d.qt??""; tr.querySelector(".pr").value=d.pr??"";
+  $("rows").appendChild(tr);
+}
+function calc(){
+  let total=0,i=0;
+  let ri=0;
+  for(const tr of $("rows").rows){
+    const nm=tr.querySelector(".nm").value.trim(), un=tr.querySelector(".un");
+    tr.classList.toggle("pempty", ri++>=ROWS && !nm);
+    const qt=tr.querySelector(".qt"), pr=tr.querySelector(".pr");
+    un.disabled=!nm; if(un.disabled) un.value="";
+    un.title=un.disabled?"Əvvəlcə malın adını yazın":"";
+    qt.disabled=!un.value; if(qt.disabled) qt.value="";
+    qt.title=qt.disabled?"Əvvəlcə ölçü vahidini seçin":"";
+    pr.disabled=!qt.value.trim(); if(pr.disabled) pr.value="";
+    pr.title=pr.disabled?"Əvvəlcə miqdarı yazın":"";
+    const q=num(tr.querySelector(".qt").value), p=num(tr.querySelector(".pr").value);
+    if(nm){i++; tr.querySelector(".n").textContent=i;} else {tr.querySelector(".n").textContent="";}
+    const a=(!isNaN(p)&&p!==0)?(isNaN(q)?0:q)*p:NaN;
+    tr.querySelector(".am").textContent=isNaN(a)?"":fmt(Math.round(a*100)/100);
+    if(!isNaN(a)) total+=a;
+  }
+  /* rows: at least 12, grow one past the last filled row, never more than 20 */
+  const rs=$("rows").rows; let lastFilled=0;
+  for(let k=0;k<rs.length;k++) if(rs[k].querySelector(".nm").value.trim()) lastFilled=k+1;
+  const hasSvc=[...rs].some(x=>x.classList.contains("svc"));
+  const want=Math.min(hasSvc?MAXROWS:MAXROWS-1, Math.max(ROWS, lastFilled+1));
+  if(rs.length<want){ while($("rows").rows.length<want) makeRow(); return calc(); }
+  if(rs.length>want){ while($("rows").rows.length>want && !$("rows").lastElementChild.querySelector(".nm").value.trim()) $("rows").lastElementChild.remove(); return calc(); }
+  $("sheet").classList.toggle("compact", i>12);
+  total=Math.round(total*100)/100;
+  TOTAL=total; updateOutputButtons(); renderProtokol();
+  $("totWords").innerHTML=`<b>${fmt(total)}</b>&nbsp;manat (${words(total)})`;
+  save();
+}
+
+/* ---- customer ---- */
+function fillCustomers(){
+  const sel=$("cust");
+  sel.innerHTML='<option value="">— seçin —</option>'+CUSTOMERS.map((c,i)=>`<option value="${i}">${c[0]}</option>`).join("");
+}
+function applyCustomer(){
+  const c=CUSTOMERS[$("cust").value]; if(!c) return;
+  $("buyer").value=c[0]; $("buyerTin").value=c[1]; $("contract").value=c[2]; $("contractDate").value=c[3]; save();
+}
+
+/* ---- date ---- */
+function isoToTxt(iso){if(!iso)return"";const[y,m,d]=iso.split("-");return`${d}.${m}.${y}`;}
+function today(){const d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");}
+
+/* ---- state ---- */
+const FIELDS=["nom","dateTxt","seller","sellerTin","contract","buyer","contractDate","buyerTin","cur","receiver","b1","b2","b3","b4","b5","b6"];
+function state(){
+  const s={cust:$("cust").value,date:$("dateCtl").value,qeyd:$("qeyd").checked,rows:[]};
+  FIELDS.forEach(f=>s[f]=$(f).value);
+  for(const tr of $("rows").rows) s.rows.push({nm:tr.querySelector(".nm").value,un:tr.querySelector(".un").value,qt:tr.querySelector(".qt").value,pr:tr.querySelector(".pr").value});
+  return s;
+}
+function save(){try{localStorage.setItem(LSP+"hf",JSON.stringify(state()));}catch(e){} if(typeof renderProtokol==="function") renderProtokol(); if(typeof aHeader==="function") aHeader(); if(typeof isSaved==="function") updateOutputButtons();}
+function load(){try{return JSON.parse(localStorage.getItem(LSP+"hf")||"null");}catch(e){return null;}}
+const FIXED=["seller","sellerTin","cur","b1","b2","b3","b4","b5","b6"];
+function render(s){
+  FIELDS.forEach(f=>{if(s[f]!==undefined&&!FIXED.includes(f))$(f).value=s[f];});
+  $("cust").value=s.cust||""; $("dateCtl").value=s.date||""; $("qeyd").checked=s.qeyd!==false;
+  $("nomCtl").value=s.nom||"";
+  $("rows").innerHTML=""; const r=s.rows||[];
+  for(let i=0;i<Math.min(MAXROWS,Math.max(ROWS,r.length));i++) makeRow(r[i]);
+  $("qeydBlock").hidden=!$("qeyd").checked; calc();
+}
+function blank(nom){
+  const s=state(); s.rows=[]; s.nom=String(nom); s.date=today(); s.dateTxt=isoToTxt(s.date); return s;
+}
+function toast(t){const e=$("toast");e.textContent=t;e.hidden=false;clearTimeout(toast.t);toast.t=setTimeout(()=>e.hidden=true,t.length>40?5000:1800);}
+
+/* ---- events ---- */
+$("sheet").addEventListener("input",e=>{ if(e.target.id==="nom")$("nomCtl").value=e.target.value; if(e.target.id==="dateTxt"){const m=e.target.value.match(/^(\d{2})\.(\d{2})\.(\d{4})$/); if(m)$("dateCtl").value=`${m[3]}-${m[2]}-${m[1]}`;} calc(); });
+$("cust").addEventListener("change",applyCustomer);
+$("nomCtl").addEventListener("input",()=>{$("nom").value=$("nomCtl").value;save();});
+$("dateCtl").addEventListener("input",()=>{$("dateTxt").value=isoToTxt($("dateCtl").value);save();});
+$("qeyd").addEventListener("change",()=>{$("qeydBlock").hidden=!$("qeyd").checked;save();});
+$("sheet").addEventListener("keydown",e=>{
+  const t=e.target;
+  if(t.matches("select.un")&&(e.key==="Delete"||e.key==="Backspace")){e.preventDefault();t.value="";calc();}
+});
+/* Enter ilə növbəti xanaya keçid: mal → ölçü vahidi → miqdar → qiymət → növbəti malın adı */
+function nextCell(t){
+  const tr=t.closest("tr"); calc();
+  let next=null;
+  if(t.matches(".nm")) next=tr.querySelector(".un");
+  else if(t.matches(".un")) next=tr.querySelector(".qt");
+  else if(t.matches(".qt")) next=tr.querySelector(".pr");
+  else if(t.matches(".pr")){ let nr=tr.nextElementSibling; while(nr&&nr.classList.contains("svc")) nr=nr.nextElementSibling; next=nr&&nr.querySelector(".nm"); }
+  if(next&&!next.disabled){ next.focus(); if(next.select) next.select(); return true; }
+  return false;
+}
+$("rows").addEventListener("keydown",e=>{
+  const t=e.target;
+  if(e.key==="Enter" && t.matches(".nm,.un,.qt,.pr")){ e.preventDefault(); if(t.value.trim()) nextCell(t); }
+});
+let unByMouse=false;
+$("rows").addEventListener("pointerdown",e=>{ unByMouse=e.target.matches(".un"); });
+$("rows").addEventListener("change",e=>{
+  if(e.target.matches(".un") && unByMouse && e.target.value){ unByMouse=false; nextCell(e.target); }
+});
+$("rows").addEventListener("mouseup",e=>{ const t=e.target; if(t.dataset&&t.dataset.jf){ e.preventDefault(); delete t.dataset.jf; } });
+/* Miqdar və qiymətə yalnız rəqəm (və bir onluq ayırıcı: vergül və ya nöqtə) */
+function cleanNumber(v,dec){
+  v=v.replace(/[^0-9.,]/g,"");
+  const i=v.search(/[.,]/);
+  if(i>=0) v=v.slice(0,i+1)+v.slice(i+1).replace(/[.,]/g,"").slice(0,dec);
+  if(/^[.,]/.test(v)) v="0"+v;
+  return v;
+}
+$("rows").addEventListener("input",e=>{
+  const t=e.target;
+  if(t.matches(".nm")){ const c=capFirst(t.value); if(c!==t.value){ const p=t.selectionStart; t.value=c; t.setSelectionRange(p,p); } }
+  if(!t.matches(".qt,.pr")) return;
+  const c=cleanNumber(t.value,t.matches(".pr")?2:3);
+  if(c!==t.value){ const pos=Math.max(0,(t.selectionStart||0)-(t.value.length-c.length)); t.value=c; try{t.setSelectionRange(pos,pos);}catch(_){} }
+});
+/* Hesab faktura → Akt (mallar və təhvil alan) */
+$("rows").addEventListener("input",()=>syncAkt());
+$("rows").addEventListener("change",e=>{ if(e.target.matches("select")) syncAkt(); });
+$("receiver").addEventListener("input",()=>syncAkt());
+$("sheet").addEventListener("focusin",e=>{
+  const t=e.target;
+  if(t.matches("#rows input")&&t.value&&!t.readOnly){ t.select(); t.dataset.jf="1"; }
+});
+$("newBtn").addEventListener("click",()=>{render(blank($("nom").value));aClear();toast("Mallar siyahısı təmizləndi");});
+/* Növbəti nömrə: bu ilin ən böyük nömrəsi + 1; yeni ildə 1-dən başlayır */
+function nextNumber(){
+  const y=String(new Date().getFullYear());
+  let max=0; (typeof KROWS!=="undefined"?KROWS:[]).forEach(x=>{ if(x[2].slice(0,4)===y&&x[1]>max) max=x[1]; });
+  const cur=parseInt($("nom").value,10), cd=$("dateCtl").value;
+  if(cur&&cd&&cd.slice(0,4)===y&&cur>max) max=cur;
+  return max+1;
+}
+$("nextBtn").addEventListener("click",()=>{const n=nextNumber();render(blank(n));aClear();toast("Yeni faktura № "+n);});
+
+/* ---- Protokol ---- */
+const AYLAR=["Yanvar","Fevral","Mart","Aprel","May","İyun","İyul","Avqust","Sentyabr","Oktyabr","Noyabr","Dekabr"];
+const SUF={1:"ci",2:"ci",3:"cü",4:"cü",5:"ci",6:"cı",7:"ci",8:"ci",9:"cu"};
+const SUF0={0:"ci",1:"cu",2:"ci",3:"cu",4:"cı",5:"ci",6:"cı",7:"ci",8:"ci",9:"cu"};
+function yearSuffix(dmy){ const y=String(dmy||"").trim().slice(-2); if(!/^\d\d$/.test(y)) return ""; return y[1]!=="0"?SUF[y[1]]:SUF0[y[0]]; }
+function longDate(iso){ if(!iso) return ""; const [y,m,d]=iso.split("-"); return parseInt(d,10)+" "+AYLAR[parseInt(m,10)-1]+" "+y; }
+function renderProtokol(){
+  if(!$("sheetP")) return;
+  $("pDate").textContent=longDate($("dateCtl").value);
+  const buyer=$("buyer").value.trim(), cd=$("contractDate").value.trim();
+  $("pText").textContent=buyer?("“Satıcı” adlandırılacaq, "+$("seller").value+" (VÖEN: "+$("sellerTin").value+") və “Alıcı” adlandırılacaq "+buyer+"  (VÖEN:"+$("buyerTin").value+") "+cd+" "+yearSuffix(cd)+" il tarixli "+$("contract").value+" saylı Alqı-Satqı Müqaviləsi əsasında aşağıdda qeyd olunan Malların adı,miqdarı,ölçü vahidi və qiyməti barədə razılığa gəldik:"):"";
+  const body=$("pRows"); body.innerHTML="";
+  let k=0;
+  for(const tr of $("rows").rows){
+    if(tr.classList.contains("pempty")) continue;
+    const row=document.createElement("tr"); k++;
+    const cells=[tr.querySelector(".n").textContent,tr.querySelector(".nm").value,tr.querySelector(".un").value,tr.querySelector(".qt").value,tr.querySelector(".pr").value,tr.querySelector(".am").textContent];
+    cells.forEach((v,i)=>{const td=document.createElement("td"); if(i===1){ td.className="l"; td.colSpan=3; } td.textContent=v; row.appendChild(td);});
+    body.appendChild(row);
+  }
+  $("pSum").textContent=fmt(TOTAL); $("pTotal").textContent="manat ("+words(TOTAL)+")";
+  $("pSeller").textContent=$("seller").value;
+  setTimeout(()=>{ if(typeof centerMY==="function") centerMY(); },0);
+  const c=CUSTOMERS[$("cust").value], dir=(c&&c[4])||"";
+  const parts=dir.split("\n"), title=(parts[0]||"").replace(/[.:]+$/,"")+(dir?":":""), name=(parts[1]||"").replace(/_+/g,"").trim();
+  $("pDirTitle").textContent=dir?title:""; $("pDirName").textContent=name; $("pBuyerBox").style.visibility=dir?"visible":"hidden";
+}
+let TAB="A";
+function activeSheet(){ return TAB==="P"?$("sheetP"):TAB==="A"?$("sheetA"):TAB==="K"?$("sheetK"):TAB==="S"?$("sheetS"):$("sheet"); }
+function setTab(t){
+  TAB=t; ["F","P","A","K","S"].forEach(k=>$("tab"+k).setAttribute("aria-selected",t===k));
+  $("sheet").hidden=t!=="F"; $("sheetP").hidden=t!=="P"; $("sheetA").hidden=t!=="A"; $("sheetK").hidden=t!=="K"; $("sheetS").hidden=t!=="S";
+  document.body.classList.toggle("tabK",t==="K"||t==="S");
+  if(t==="K") kRender();
+  if(t==="S") sRender();
+  renderProtokol(); aHeader(); updateOutputButtons(); centerMY();
+}
+$("tabF").addEventListener("click",()=>setTab("F"));
+$("tabP").addEventListener("click",()=>setTab("P"));
+$("tabA").addEventListener("click",()=>setTab("A"));
+$("tabK").addEventListener("click",()=>setTab("K"));
+$("tabS").addEventListener("click",()=>setTab("S"));
+function pdfName(){
+  if(TAB==="A") return ($("nom").value.trim()+"  №-li Hesab  Faktura,  "+$("buyer").value.trim()+",  "+$("carPlate").value.trim()).replace(/[\\/:*?"<>|]/g," ").trim();
+  if(TAB==="P"){ const d=$("dateCtl").value.split("-"); return ($("buyer").value.trim()+" "+(d.length===3?d[2]+"."+d[1]+"."+d[0]:"")).replace(/[\\/:*?"<>|]/g," ").trim(); }
+  const n=$("nom").value.trim(), b=$("buyer").value.trim();
+  return (n+" №-li Hesab  Faktura,"+b).replace(/[\\/:*?"<>|]/g," ").trim();
+}
+let oldTitle=document.title;
+window.addEventListener("beforeprint",()=>{oldTitle=document.title; document.title=pdfName();});
+window.addEventListener("afterprint",()=>{document.title=oldTitle;});
+function doPrint(){ if(!(curTotal()>0)){ toast("Məbləğ 0-dır, sənəd çap edilə bilməz"); return; } if(!isSaved()){ toast("Əvvəlcə yadda saxlayın, sonra çap edə bilərsiniz"); return; } fitPage(); window.print(); }
+/* Drive qoşulana qədər: yadda saxla = Köçürmələrə yaz + PDF kimi saxlama pəncərəsi */
+function saveLocal(){ if(!(curTotal()>0)){ toast("Məbləğ 0-dır, sənəd saxlanıla bilməz"); return; } kUpsert(); markSaved(); toast("Yadda saxlanıldı, Köçürmələrə əlavə olundu"); fitPage(); window.print(); }
+$("printBtn").addEventListener("click",doPrint);
+/* ---- Google Drive-a avtomatik saxlama (şirkətin öz Drive-ı) ---- */
+function loadScript(src){return new Promise((ok,no)=>{const s=document.createElement("script");s.src=src;s.onload=ok;s.onerror=()=>no(new Error("Kitabxana yüklənmədi"));document.head.appendChild(s);});}
+async function makePdfBase64(){
+  if(!window.html2canvas) await loadScript("https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js");
+  if(!window.jspdf) await loadScript("https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js");
+  const sheet=activeSheet(); const act=document.activeElement; if(act&&act.blur) act.blur();
+  sheet.classList.add("pdfmode"); sheet.style.zoom="";
+  try{
+    const canvas=await html2canvas(sheet,{scale:2,backgroundColor:"#ffffff",useCORS:true,windowWidth:sheet.scrollWidth});
+    const pdf=new jspdf.jsPDF({orientation:"portrait",unit:"mm",format:"a4"});
+    let w=210,h=canvas.height*210/canvas.width,x=0;
+    if(h>297){ w=w*297/h; h=297; x=(210-w)/2; }
+    pdf.addImage(canvas.toDataURL("image/jpeg",0.92),"JPEG",x,0,w,h);
+    return pdf.output("datauristring").split(",")[1];
+  } finally { sheet.classList.remove("pdfmode"); }
+}
+function fileName(){ if(TAB==="P"||TAB==="A") return pdfName(); return ($("nom").value.trim()+" №-li Hesab  Faktura,"+$("buyer").value.trim()).replace(/[\\/:*?"<>|]/g," ").trim(); }
+async function saveToDrive(){
+  if(!(curTotal()>0)){ toast("Məbləğ 0-dır, sənəd saxlanıla bilməz"); return; }
+  if(!SESSION){ toast("Əvvəlcə daxil olun"); return; }
+  if(!$("buyer").value.trim()){ toast("Əvvəlcə müştərini seçin"); return; }
+  const btn=$("saveBtn"), label=btn.textContent; btn.disabled=true; btn.dataset.busy="1"; btn.textContent="Saxlanılır…";
+  try{
+    let pdf;
+    try{ pdf=await makePdfBase64(); }
+    catch(e){ console.error(e); delete btn.dataset.busy; btn.textContent=label; return saveLocal(); }   // PDF kitabxanası yüklənmədisə: çap pəncərəsi
+    const j=await api("savePdf",{name:fileName(),pdf,year:$("dateCtl").value.slice(0,4)});
+    kUpsert(); markSaved(); toast("Drive-da saxlanıldı: "+j.name);
+  }catch(err){
+    console.error(err); toast("Saxlanılmadı: "+err.message+". İnterneti yoxlayıb yenidən cəhd edin.");
+  }finally{ delete btn.dataset.busy; btn.textContent=label; updateOutputButtons(); }
+}
+$("saveBtn").addEventListener("click",saveToDrive);
+/* M.Y — imza xəttinin ortasında */
+function centerMY(){
+  const pairs=[["myF","#sheet .sign2 .ln"],["myP1","#sheetP .psign .who:first-child .ln"],["myP2","#sheetP .psign .right .ln"],["myA","#sheetA .asign2 .ln"]];
+  pairs.forEach(([id,sel])=>{
+    const my=$(id), ln=document.querySelector(sel); if(!my||!ln||!my.offsetParent) return;
+    const box=my.parentElement.getBoundingClientRect(), lr=ln.getBoundingClientRect(), w=my.getBoundingClientRect().width;
+    my.style.right="auto"; my.style.left=(lr.left+lr.width/2-box.left-w/2)+"px";
+  });
+}
+function fitPage(){
+  const s=activeSheet(); s.style.zoom=""; s.style.minHeight=""; centerMY(); s.style.minHeight="0";
+  const h=s.scrollHeight; s.style.minHeight="";
+  const max=1110; if(h>max){ s.style.zoom=(max/h).toFixed(3); s.style.minHeight="0"; }
+}
+window.addEventListener("beforeprint",fitPage);
+window.addEventListener("afterprint",()=>{["sheet","sheetP","sheetA"].forEach(i=>{$(i).style.zoom="";$(i).style.minHeight="";});});
+/* ================= AKT ================= */
+const A_SRV=7, A_PRT=12, A_PRTMAX=20, A_LET="ABCDEFG", A_UNITS=["ədəd","dəst","qram","litr"];
+
+function aMakeSrv(d={}){
+  const tr=document.createElement("tr");
+  tr.innerHTML=`<td class="ltr"></td><td colspan="5"><input class="nm"></td><td><input class="us"></td><td class="c"><input class="am" inputmode="decimal" style="text-align:center"></td>`;
+  tr.querySelector(".nm").value=d.nm||""; tr.querySelector(".us").value=d.us||""; tr.querySelector(".am").value=d.am||"";
+  $("srvRows").appendChild(tr);
+}
+function aMakePrt(d={}){
+  const tr=document.createElement("tr");
+  tr.innerHTML=`<td class="c n"></td><td colspan="3"><input class="nm"></td><td class="c"><select class="un" aria-label="Ölçü vahidi"><option value=""></option>${A_UNITS.map(u=>`<option>${u}</option>`).join("")}</select></td><td class="c"><input class="qt" inputmode="decimal" style="text-align:center"></td><td class="c"><input class="pr" inputmode="decimal" style="text-align:center"></td><td class="c sm"></td>`;
+  tr.querySelector(".nm").value=d.nm||"";
+  const u=tr.querySelector(".un"); if(d.un&&!A_UNITS.includes(d.un)) u.add(new Option(d.un,d.un)); u.value=d.un||"";
+  tr.querySelector(".qt").value=d.qt||""; tr.querySelector(".pr").value=d.pr||"";
+  $("prtRows").appendChild(tr);
+}
+function aCalc(){
+  let s1=0, li=0;
+  const anySrv=[...$("srvRows").rows].some(tr=>tr.querySelector(".nm").value.trim());
+  [...$("srvRows").rows].forEach((tr,k)=>{
+    const nm=tr.querySelector(".nm").value.trim(), us=tr.querySelector(".us"), am=tr.querySelector(".am");
+    tr.cells[0].textContent=nm?A_LET[li++]:"";
+    us.disabled=!nm; if(!nm) us.value=""; am.disabled=!nm; if(!nm) am.value="";
+    us.title=am.title=nm?"":"Əvvəlcə görülən işi yazın";
+    const v=num(am.value); if(!isNaN(v)) s1+=v;
+  });
+  let s2=0,n=0;
+  for(const tr of $("prtRows").rows){
+    const nm=tr.querySelector(".nm").value.trim(), un=tr.querySelector(".un"), qt=tr.querySelector(".qt"), pr=tr.querySelector(".pr");
+    un.disabled=!nm; if(un.disabled) un.value="";
+    qt.disabled=!un.value; if(qt.disabled) qt.value="";
+    pr.disabled=!qt.value.trim(); if(pr.disabled) pr.value="";
+    un.title=un.disabled?"Əvvəlcə malın adını yazın":""; qt.title=qt.disabled?"Əvvəlcə ölçü vahidini seçin":""; pr.title=pr.disabled?"Əvvəlcə miqdarı yazın":"";
+    tr.querySelector(".n").textContent=nm?String(++n):"";
+    const q=num(qt.value), p=num(pr.value), a=(!isNaN(p)&&p!==0)?(isNaN(q)?0:q)*p:NaN;
+    tr.querySelector(".sm").textContent=isNaN(a)?"":fmt(Math.round(a*100)/100);
+    if(!isNaN(a)) s2+=a;
+  }
+  /* ehtiyat hissələri cədvəli: ən az 12, doldurduqca 20-yə qədər */
+  const pr_=$("prtRows").rows; let lf=0;
+  for(let k=0;k<pr_.length;k++){ if(pr_[k].querySelector(".nm").value.trim()) lf=k+1; pr_[k].classList.toggle("pempty",k>=A_PRT&&!pr_[k].querySelector(".nm").value.trim()); }
+  const want=Math.min(A_PRTMAX,Math.max(A_PRT,lf+1));
+  if(pr_.length<want){ while($("prtRows").rows.length<want) aMakePrt(); return aCalc(); }
+  if(pr_.length>want){ while($("prtRows").rows.length>want&&!$("prtRows").lastElementChild.querySelector(".nm").value.trim()) $("prtRows").lastElementChild.remove(); return aCalc(); }
+  syncInvoice(Math.round(s1*100)/100);
+  s1=Math.round(s1*100)/100; s2=Math.round(s2*100)/100; AKT_TOTAL=Math.round((s1+s2)*100)/100;
+  $("srvSum").textContent=fmt(s1); $("srvWords").textContent="manat ("+words(s1)+")";
+  $("prtSum").textContent=fmt(s2); $("prtWords").textContent="manat ("+words(s2)+")";
+  $("allSum").textContent=fmt(AKT_TOTAL); $("allWords").textContent="manat ("+words(AKT_TOTAL)+")";
+  updateOutputButtons(); aSave();
+}
+function aHeader(){
+  if(!$("sheetA")) return;
+  const d=$("dateCtl").value, c=CUSTOMERS[$("cust").value];
+  const dd=d?d.split("-").reverse().join("."):"";
+  $("aDate").textContent=dd; $("aDate2").textContent=dd; $("aNom").textContent=$("nom").value;
+  $("oName").textContent=$("buyer").value; $("oContract").textContent=$("contract").value; $("oTin").textContent=$("buyerTin").value;
+  $("oPhone").textContent=(c&&c[5])||"";
+  $("aTitle").textContent=(c&&c[6])||"AVTOMOBİLİN TƏMİRİ AKTI";
+}
+function aState(){
+  return {car:["carModel","carVin","carKm","carPlate"].map(id=>$(id).value),receiver:$("aReceiver").value,giver:$("aGiver").value,
+    srv:[...$("srvRows").rows].map(tr=>({nm:tr.querySelector(".nm").value,us:tr.querySelector(".us").value,am:tr.querySelector(".am").value})),
+    prt:[...$("prtRows").rows].map(tr=>({nm:tr.querySelector(".nm").value,un:tr.querySelector(".un").value,qt:tr.querySelector(".qt").value,pr:tr.querySelector(".pr").value}))};
+}
+function aSave(){ try{localStorage.setItem(LSP+"akt",JSON.stringify(aState()));}catch(e){} updateOutputButtons(); }
+function aRender(s){
+  s=s||{}; const car=s.car||[]; ["carModel","carVin","carKm","carPlate"].forEach((id,i)=>$(id).value=car[i]||""); $("carPlate").value=formatPlate($("carPlate").value);
+  $("aReceiver").value=s.receiver||"";
+  $("srvRows").innerHTML=""; for(let i=0;i<A_SRV;i++) aMakeSrv((s.srv||[])[i]);
+  $("prtRows").innerHTML=""; const pl=(s.prt||[]); for(let i=0;i<Math.min(A_PRTMAX,Math.max(A_PRT,pl.length));i++) aMakePrt(pl[i]);
+  $("aGiver").value=s.giver||$("seller").value||"";
+  aHeader(); aCalc();
+}
+function aClear(){ aRender({receiver:$("aReceiver").value,giver:$("aGiver").value}); }
+/* Akt → Hesab faktura: mallar, təhvil alan, təhvil verən (fiziki şəxs) */
+let syncing=false, READY=false;
+function syncAkt(){
+  if(syncing||!READY) return;
+  const src=[...$("rows").rows].filter(tr=>!tr.classList.contains("svc")).map(tr=>({nm:tr.querySelector(".nm").value,un:tr.querySelector(".un").value,qt:tr.querySelector(".qt").value,pr:tr.querySelector(".pr").value}));
+  while($("prtRows").rows.length<Math.min(A_PRTMAX,src.length)) aMakePrt();
+  [...$("prtRows").rows].forEach((tr,i)=>{
+    const d=src[i]||{nm:"",un:"",qt:"",pr:""};
+    tr.querySelector(".nm").value=d.nm;
+    const u=tr.querySelector(".un"); u.disabled=false; if(d.un&&!A_UNITS.includes(d.un)&&![...u.options].some(o=>o.value===d.un)) u.add(new Option(d.un,d.un)); u.value=d.un;
+    const q=tr.querySelector(".qt"), p=tr.querySelector(".pr"); q.disabled=false; p.disabled=false; q.value=d.qt; p.value=d.pr;
+  });
+  $("aReceiver").value=$("receiver").value;
+  aCalc();
+}
+function syncInvoice(svc){
+  if(syncing||!READY||!$("rows")) return; syncing=true;
+  const src=[...$("prtRows").rows].map(tr=>({nm:tr.querySelector(".nm").value,un:tr.querySelector(".un").value,qt:tr.querySelector(".qt").value,pr:tr.querySelector(".pr").value}));
+  /* xidmətin cəmi malların ardınca ayrıca sətir kimi */
+  if(svc>0){
+    let lf=0; src.forEach((d,i)=>{ if(d.nm.trim()) lf=i+1; });
+    src[lf]={nm:"Xidmət haqqı (usta)",un:"ədəd",qt:"1",pr:fmt(svc)};
+  }
+  while($("rows").rows.length<src.length) makeRow();
+  const act=document.activeElement, actCls=act&&act.closest&&act.closest("#rows")?["nm","un","qt","pr"].find(c=>act.classList.contains(c)):null;
+  [...$("rows").rows].forEach((tr,i)=>{
+    const d=src[i]||{nm:"",un:"",qt:"",pr:""}, isSvc=svc>0&&d.nm==="Xidmət haqqı (usta)"&&d.qt==="1"&&i===src.findIndex(x=>x&&x.nm==="Xidmət haqqı (usta)");
+    const set=(el,v)=>{ if(el.value!==v) el.value=v; };
+    set(tr.querySelector(".nm"),d.nm);
+    const u=tr.querySelector(".un"); u.disabled=false; if(d.un&&![...u.options].some(o=>o.value===d.un)) u.add(new Option(d.un,d.un)); set(u,d.un);
+    const q=tr.querySelector(".qt"), p=tr.querySelector(".pr"); q.disabled=false; p.disabled=false; set(q,d.qt); set(p,d.pr);
+    tr.classList.toggle("svc",isSvc);
+    tr.querySelectorAll("input").forEach(el=>{ el.readOnly=isSvc; });
+    tr.querySelector(".un").tabIndex=isSvc?-1:0;
+  });
+  if(actCls&&act.closest("tr").classList.contains("svc")){ const pv=act.closest("tr").previousElementSibling; const f=pv&&pv.querySelector("."+actCls); if(f){ f.focus(); const L=f.value.length; try{f.setSelectionRange(L,L);}catch(_){} } }
+  if($("receiver").value!==$("aReceiver").value) $("receiver").value=$("aReceiver").value;
+  $("signerName").textContent=$("aGiver").value;
+  calc(); syncing=false;
+}
+$("sheetA").addEventListener("input",e=>{
+  const t=e.target;
+  if(t.matches(".am,.pr")){ const c=cleanNumber(t.value,2); if(c!==t.value) t.value=c; }
+  if(t.matches(".qt")){ const c=cleanNumber(t.value,3); if(c!==t.value) t.value=c; }
+  if(t.id==="carKm"){ const c=t.value.replace(/\D/g,""); if(c!==t.value) t.value=c; }
+  if(t.matches("#srvRows .nm,#prtRows .nm")){ const c=capFirst(t.value); if(c!==t.value){ const p=t.selectionStart; t.value=c; t.setSelectionRange(p,p); } }
+  if(t.id==="carPlate"){ const c=formatPlate(t.value); if(c!==t.value){ t.value=c; t.setSelectionRange(c.length,c.length); } }
+  aCalc();
+});
+/* Qeydiyyat nişanı: ən çox 7 simvol, böyük hərf, "99  AN  280" forması */
+/* Cədvəl adları: 1-ci hərf böyük, qalanı kiçik (Azərbaycan hərfləri ilə: i→İ, I→ı) */
+function capFirst(v){
+  const i=v.search(/\S/); if(i<0) return v;
+  return v.slice(0,i)+v.charAt(i).toLocaleUpperCase("az")+v.slice(i+1).toLocaleLowerCase("az");
+}
+function formatPlate(v){
+  const raw=v.toUpperCase().replace(/[^A-Z0-9]/g,"").slice(0,7);
+  return [raw.slice(0,2),raw.slice(2,4),raw.slice(4,7)].filter(Boolean).join("  ");
+}
+function aNext(t){
+  aCalc();
+  if(t.classList.contains("cf")){ const list=[...document.querySelectorAll("#sheetA .cf")]; const nx=list[list.indexOf(t)+1]||$("srvRows").querySelector(".nm"); nx.focus(); nx.select&&nx.select(); return; }
+  const tr=t.closest("tr"), inSrv=tr.parentNode.id==="srvRows", order=inSrv?[".nm",".us",".am"]:[".nm",".un",".qt",".pr"];
+  const i=order.findIndex(sel=>t.matches(sel));
+  let nx=i<order.length-1?tr.querySelector(order[i+1]):null;
+  if(!nx){ const nr=tr.nextElementSibling; nx=nr?nr.querySelector(".nm"):(inSrv?$("prtRows").querySelector(".nm"):$("aReceiver")); }
+  if(nx&&!nx.disabled){ nx.focus(); nx.select&&nx.select(); }
+}
+$("sheetA").addEventListener("keydown",e=>{
+  const t=e.target;
+  if(e.key==="Enter"&&t.id==="aReceiver"){ e.preventDefault(); $("aGiver").focus(); $("aGiver").select(); return; }
+  if(e.key==="Enter"&&t.matches("input,select")&&t.id!=="aGiver"){ e.preventDefault(); if(String(t.value).trim()) aNext(t); }
+  if(t.matches("select")&&(e.key==="Delete"||e.key==="Backspace")){ e.preventDefault(); t.value=""; aCalc(); }
+});
+let aSelMouse=false;
+$("sheetA").addEventListener("pointerdown",e=>{ aSelMouse=e.target.matches("select"); });
+$("sheetA").addEventListener("change",e=>{ if(e.target.matches("select")){ aCalc(); if(aSelMouse&&e.target.value){ aSelMouse=false; aNext(e.target); } } });
+$("sheetA").addEventListener("focusin",e=>{ const t=e.target; if(t.matches("input")&&t.value){ t.select(); t.dataset.jf="1"; } });
+$("sheetA").addEventListener("mouseup",e=>{ const t=e.target; if(t.dataset&&t.dataset.jf){ e.preventDefault(); delete t.dataset.jf; } });
+
+/* ================= KÖÇÜRMƏLƏR ================= */
+/* qeyd: [şirkət, faktura №, tarix (yyyy-mm-dd), məbləğ, status, E-qaimə №] — status "" = ödənilməyib */
+var KROWS=[];
+function kNorm(){ KROWS.forEach(x=>{ x[5]=String(x[5]||"").replace(/[\u200b\u200c\u200d\ufeff]/g,"").trim(); if(x[4]==="Ləğv edildi"){ x[4]=""; x[8]=1; } }); }
+/* hər dəyişiklik şirkətin Drive-ına yazılır (bir neçə dəyişiklik bir yerdə göndərilir) */
+function kSave(){ try{ localStorage.setItem(LSP+"kocur",JSON.stringify(KROWS)); }catch(e){} kPush(); }
+function kDays(iso){ const [y,m,d]=iso.split("-").map(Number); const t=new Date(); return Math.floor((Date.UTC(t.getFullYear(),t.getMonth(),t.getDate())-Date.UTC(y,m-1,d))/86400000); }
+function kDmy(iso){ const [y,m,d]=iso.split("-"); return d+"."+m+"."+y; }
+function kMoney(n){ return fmt(Math.round(n*100)/100)+" manat"; }
+/* Faktura yadda saxlananda / çap olunanda siyahıya düşür (eyni nömrə varsa yenilənir) */
+function kUpsert(){
+  const nom=parseInt($("nom").value,10), firm=$("buyer").value.trim(), iso=$("dateCtl").value;
+  if(!nom||!firm||!iso||!(TOTAL>0)) return;
+  const i=KROWS.findIndex(x=>x[1]===nom&&x[2].slice(0,4)===iso.slice(0,4));   // nömrə hər il 1-dən başlayır
+  if(i>=0){
+    const old=KROWS[i][3];
+    /* eyni nömrə fərqli məbləğlə yenidən saxlananda sətir yaşıl işarələnir */
+    if(Math.round(old*100)!==Math.round(TOTAL*100)){ KROWS[i][6]=1; KROWS[i][7]=(KROWS[i][7]||[]).concat([old]); }
+    KROWS[i][0]=firm; KROWS[i][2]=iso; KROWS[i][3]=TOTAL;
+  }
+  else KROWS.push([firm,nom,iso,TOTAL,"",""]);
+  KROWS.sort((a,b)=>a[2].slice(0,4).localeCompare(b[2].slice(0,4))||a[1]-b[1]); kSave();
+}
+function kSms(x){
+  const cd=kDmy(x[2]);
+  return "Hörmətli  Müştəri ("+x[0]+")\n\nSizin "+cd+" "+yearSuffix(cd)+" il tarixli "+x[1]+" nömrəli hesab faktura üzrə yaranmış "+fmt(x[3])+" manat borc məbləğinin son ödəniş müddətinə 2 gün qalmışdır.Yaranmış borc məbləğinin ödənilməsini Sizdən xahiş edirik.\n\n"+(PROFILE.smsSign||("Hörmətlə "+(PROFILE.name||"")));
+}
+let kYearInit=false;
+function kFillFilters(){
+  const firms=[...new Set(KROWS.map(x=>x[0]))].sort((a,b)=>a.localeCompare(b,"az"));
+  const cy=new Date().getFullYear(), ys=new Set(KROWS.map(x=>x[2].slice(0,4)));
+  for(let y=2025;y<=cy;y++) ys.add(String(y));
+  const years=[...ys].sort().reverse();
+  const f=$("kFirm").value, y=$("kYear").value;
+  $("kFirm").innerHTML='<option value="">Hamısı</option>'+firms.map(n=>`<option>${n.replace(/</g,"&lt;")}</option>`).join("");
+  $("kYear").innerHTML=years.map(n=>`<option>${n}</option>`).join("")+'<option value="">Hamısı</option>';
+  if(firms.includes(f)) $("kFirm").value=f;
+  if(!kYearInit){ $("kYear").value=String(cy); kYearInit=true; } else if(years.includes(y)||y==="") $("kYear").value=y; else $("kYear").value=String(cy);
+}
+function kFiltered(){
+  const f=$("kFirm").value, y=$("kYear").value, st=$("kStatus").value, q=$("kSearch").value.trim().toLowerCase();
+  return KROWS.filter(x=>(!f||x[0]===f)&&x[2].startsWith(y)&&(st==="all"||(st==="Ləğv edildi"?!!x[8]:(!x[8]&&x[4]===st)))&&(!q||String(x[1]).includes(q)||x[5].toLowerCase().includes(q)));
+}
+function kSummary(){
+  const f=$("kFirm").value, unpaid=KROWS.filter(x=>(!f||x[0]===f)&&x[4]===""&&!x[8]);
+  $("kDebt").textContent=kMoney(unpaid.reduce((s,x)=>s+x[3],0));
+  $("kLate").textContent=kMoney(unpaid.filter(x=>kDays(x[2])>15).reduce((s,x)=>s+x[3],0));
+}
+/* E-qaimə xanasına klikləyəndə altında "Ləğv edildi" seçimi çıxır (nömrə olsa da) */
+let kMenuTarget=null;
+function kShowMenu(eq,rec,tr){
+  kMenuTarget={eq,rec,tr};
+  const m=$("kMenu"), b=$("kMenuBtn"), rc=eq.getBoundingClientRect();
+  b.textContent=rec[8]?"Ləğvi götür":"Ləğv edildi";
+  m.hidden=false; m.style.left=rc.left+"px"; m.style.top=(rc.bottom+3)+"px";
+}
+function kHideMenu(){ $("kMenu").hidden=true; kMenuTarget=null; }
+$("kMenuBtn").addEventListener("mousedown",e=>{
+  e.preventDefault(); if(!kMenuTarget) return;
+  const {eq,rec,tr}=kMenuTarget; kHideMenu();
+  if(rec[8]){ delete rec[8]; kSave(); kRender(); toast("Ləğv götürüldü"); return; }
+  rec[5]=""; rec[8]=1; kSave(); eq.blur(); kRender();
+  toast("Ləğv edildi. Status → \"Ləğv edildi\" süzgəcində görə bilərsiniz");
+});
+document.addEventListener("scroll",kHideMenu,true);
+async function kOpenPdf(x){
+  if(!SESSION){ toast("Əvvəlcə daxil olun"); return; }
+  const w=window.open("","_blank");   // popup bloklanmasın deyə pəncərə dərhal açılır
+  if(w){ try{ w.document.title=x[1]+" №-li Hesab Faktura"; w.document.body.style.cssText="font:16px sans-serif;padding:40px;color:#555"; w.document.body.textContent=x[1]+" №-li hesab faktura Drive-da axtarılır…"; }catch(_){} }
+  toast(x[1]+" №-li faktura axtarılır…");
+  try{
+    const j=await api("findPdf",{nom:x[1],firm:x[0],year:x[2].slice(0,4)});
+    if(w&&!w.closed) w.location.href=j.url; else window.open(j.url,"_blank");
+    toast("Açıldı: "+j.name);
+  }catch(e){
+    if(w&&!w.closed) w.close();
+    toast(e.message==="notfound"?x[1]+" №-li faktura üçün PDF Drive-da tapılmadı":e.message==="action"?"Serveri yeniləmək lazımdır (Kod.gs)":"Açılmadı: "+e.message);
+  }
+}
+function kRender(){
+  kFillFilters();
+  const list=kFiltered(), f=$("kFirm").value;
+  /* Borcun öyrənilməsi: seçilmiş şirkət (və ya hamısı), bütün illər üzrə */
+  kSummary();
+  $("kCount").textContent=String(list.length);
+  const body=$("kRows"); body.innerHTML="";
+  list.forEach((x,i)=>{
+    const tr=document.createElement("tr"), days=(x[4]===""&&!x[8])?kDays(x[2]):null;
+    tr.className=(x[8]?"cancel":(x[4]==="Ödənildi"||x[4]==="Nağd ödənildi")?"paid":(days>15?"lateRow":""))+(x[6]?" edited":"");
+    tr.innerHTML=`<td class="n">${i+1}</td><td></td><td class="n">${x[1]}</td><td>${kDmy(x[2])}</td><td class="c">${fmt(x[3])}</td>
+      <td><select aria-label="Ödənişin statusu"><option value="">—</option><option>Ödənildi</option><option>Nağd ödənildi</option></select></td>
+      <td class="n ${days!==null&&days>15?"late":""}">${days===null?"":days}</td>
+      <td><input class="eqin" aria-label="E-qaimə nömrəsi" autocomplete="off" spellcheck="false"></td>
+      <td>${days!==null&&days>12?'<button type="button" class="sms">SMS kopyala</button>':""}</td>
+      <td><button type="button" class="del" title="Sil" aria-label="Sil">×</button></td>`;
+    tr.cells[1].textContent=x[0];
+    /* faktura № -nə 2 dəfə vurduqda Drive-da saxlanmış PDF açılır */
+    tr.cells[2].classList.add("nomlink"); tr.cells[2].title="2 dəfə vurun — saxlanmış PDF-i açın";
+    tr.cells[2].addEventListener("dblclick",ev=>{ ev.stopPropagation(); kOpenPdf(x); });
+    /* dəyişiklik tarixçəsi: məbləğin üstünə gələndə həmişə görünür */
+    if((x[7]||[]).length){ tr.cells[4].title=(x[7].length)+" dəfə dəyişdirilib:\n"+x[7].concat([x[3]]).map(v=>fmt(v)).join(" → ")+" manat"; tr.cells[4].style.cursor="help"; tr.cells[4].style.textDecoration="underline dotted"; }
+    /* yaşıl rəng: sətrə 2 dəfə klikləyəndə gedir (tarixçə qalır) */
+    if(x[6]) tr.addEventListener("dblclick",ev=>{ if(ev.target.closest("input,select,button")) return; const rr=x; if(rr){ rr[6]=0; kSave(); kRender(); toast("Yoxlanıldı"); } });
+    const sel=tr.querySelector("select"); sel.value=x[4];
+    if(x[8]){ sel.disabled=true; sel.title="Faktura ləğv edilib, ödəniş statusu dəyişdirilə bilməz"; }
+    const eq=tr.querySelector("input"); eq.value=x[8]?"Ləğv edildi":x[5];
+    const fitEq=()=>{};
+    /* "Ləğv edildi" seçimi: E-qaimə xanasına 2 dəfə klikləyəndə çıxır */
+    eq.addEventListener("dblclick",()=>kShowMenu(eq,rec,tr));
+    eq.addEventListener("blur",()=>setTimeout(()=>{ if(kMenuTarget&&kMenuTarget.eq===eq) kHideMenu(); },150));
+    eq.addEventListener("input",()=>{ if(kMenuTarget) kHideMenu(); });
+    /* E-qaimə: MT ilə birlikdə düz 14 simvol — kopyalayıb yapışdırmaq olar */
+    eq.addEventListener("input",ev=>{
+      const raw=eq.value;
+      /* yazanda 14-dən o yana getmir; yapışdıranda kəsilmir ki, səhv nömrə səssizcə saxlanmasın */
+      if(!/^l/i.test(raw)){ let v=raw.replace(/[^0-9a-z]/gi,"").toUpperCase(); if(ev.inputType!=="insertFromPaste") v=v.slice(0,14); if(v!==raw) eq.value=v; }
+      fitEq();
+    });
+    const rec=x;
+    sel.addEventListener("change",()=>{ rec[4]=sel.value; kSave(); kRender(); });
+    eq.addEventListener("change",()=>{
+      const v=eq.value.trim();
+      /* "Ləğv edildi" seçiləndə MT nömrəsi silinir, faktura borca hesablanmır */
+      if(/^ləğv edildi$/i.test(v)){ rec[5]=""; rec[8]=1; kSave(); kRender(); return; }
+      if(v&&!/^[0-9A-Z]{14}$/.test(v)){ toast("E-qaimə nömrəsi MT ilə birlikdə 14 simvol olmalıdır və ya \"Ləğv edildi\" seçin"); eq.value=rec[8]?"Ləğv edildi":rec[5]; return; }
+      const wasCancel=!!rec[8]; rec[5]=v; delete rec[8]; kSave(); if(wasCancel) kRender();
+    });
+    const sb=tr.querySelector(".sms");
+    if(sb) sb.addEventListener("click",async()=>{ const t=kSms(rec); try{ await navigator.clipboard.writeText(t); toast("SMS mətni kopyalandı"); }catch(_){ const ta=document.createElement("textarea"); ta.value=t; document.body.appendChild(ta); ta.select(); try{document.execCommand("copy"); toast("SMS mətni kopyalandı");}catch(__){ toast("Kopyalanmadı"); } ta.remove(); } });
+    tr.querySelector(".del").addEventListener("click",()=>{ if(confirm(x[1]+" №-li faktura siyahıdan silinsin?")){ KROWS=KROWS.filter(r=>r!==x); kSave(); kRender(); } });
+    body.appendChild(tr);
+  });
+  $("kEmpty").hidden=list.length>0;
+}
+["kFirm","kYear","kStatus"].forEach(id=>$(id).addEventListener("change",kRender));
+$("kSearch").addEventListener("input",kRender);
+
+/* ---- Excel (.xlsx) faylı: kitabxanasız, sadə zip ---- */
+const CRC_T=(()=>{const t=new Uint32Array(256);for(let n=0;n<256;n++){let c=n;for(let k=0;k<8;k++)c=c&1?0xEDB88320^(c>>>1):c>>>1;t[n]=c>>>0;}return t;})();
+function crc32(b){let c=0xFFFFFFFF;for(let i=0;i<b.length;i++)c=CRC_T[(c^b[i])&255]^(c>>>8);return (c^0xFFFFFFFF)>>>0;}
+function zipStore(files){
+  const enc=new TextEncoder(), parts=[], central=[]; let off=0;
+  const u16=v=>[v&255,(v>>>8)&255], u32=v=>[v&255,(v>>>8)&255,(v>>>16)&255,(v>>>24)&255];
+  files.forEach(([name,txt])=>{
+    const nb=enc.encode(name), db=enc.encode(txt), crc=crc32(db);
+    const head=[...u32(0x04034b50),...u16(20),...u16(0x0800),...u16(0),...u16(0),...u16(0x21),...u32(crc),...u32(db.length),...u32(db.length),...u16(nb.length),...u16(0)];
+    parts.push(new Uint8Array(head),nb,db);
+    central.push(new Uint8Array([...u32(0x02014b50),...u16(20),...u16(20),...u16(0x0800),...u16(0),...u16(0),...u16(0x21),...u32(crc),...u32(db.length),...u32(db.length),...u16(nb.length),...u16(0),...u16(0),...u16(0),...u16(0),...u32(0),...u32(off)]),nb);
+    off+=head.length+nb.length+db.length;
+  });
+  const cdSize=central.reduce((s,p)=>s+p.length,0);
+  const end=new Uint8Array([...u32(0x06054b50),...u16(0),...u16(0),...u16(files.length),...u16(files.length),...u32(cdSize),...u32(off),...u16(0)]);
+  return new Blob([...parts,...central,end],{type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"});
+}
+function xEsc(s){ return String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
+function makeXlsx(rows){
+  const head=["Sıra №","Şirkət","Hesab fakturanın №","Hesab fakturanın tarixi","Satışın cəmi məbləği","Ödənişin statusu","Gün","E-qaimə №"];
+  const L=i=>String.fromCharCode(65+i);
+  const cell=(r,c,v,st)=>{ const ref=L(c)+r; if(v===""||v===null||v===undefined) return `<c r="${ref}"${st?` s="${st}"`:""}/>`;
+    return typeof v==="number"?`<c r="${ref}"${st?` s="${st}"`:""}><v>${v}</v></c>`:`<c r="${ref}" t="inlineStr"${st?` s="${st}"`:""}><is><t xml:space="preserve">${xEsc(v)}</t></is></c>`; };
+  const serial=iso=>{ const [y,m,d]=iso.split("-").map(Number); return (Date.UTC(y,m-1,d)-Date.UTC(1899,11,30))/86400000; };
+  let xml=`<row r="1">${head.map((h,c)=>cell(1,c,h,1)).join("")}</row>`;
+  rows.forEach((x,i)=>{ const r=i+2, days=(x[4]===""&&!x[8])?kDays(x[2]):"";
+    xml+=`<row r="${r}">${[cell(r,0,i+1),cell(r,1,x[0]),cell(r,2,x[1]),cell(r,3,serial(x[2]),2),cell(r,4,x[3]),cell(r,5,x[8]?"Ləğv edildi":x[4]),cell(r,6,days),cell(r,7,x[5])].join("")}</row>`; });
+  const tr=rows.length+2;
+  xml+=`<row r="${tr}">${cell(tr,1,"Cəmi",1)}${cell(tr,4,Math.round(rows.reduce((s,x)=>s+x[3],0)*100)/100,1)}</row>`;
+  const widths=[8,38,12,14,14,16,7,20];
+  const sheet=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetViews><sheetView workbookViewId="0"><pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews><cols>${widths.map((w,i)=>`<col min="${i+1}" max="${i+1}" width="${w}" customWidth="1"/>`).join("")}</cols><sheetData>${xml}</sheetData><autoFilter ref="A1:H${rows.length+1}"/></worksheet>`;
+  const styles=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><numFmts count="1"><numFmt numFmtId="164" formatCode="dd.mm.yyyy"/></numFmts><fonts count="2"><font><sz val="11"/><name val="Calibri"/></font><font><b/><sz val="11"/><name val="Calibri"/></font></fonts><fills count="2"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill></fills><borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="3"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/><xf numFmtId="0" fontId="1" fillId="0" borderId="0" xfId="0" applyFont="1"/><xf numFmtId="164" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/></cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>`;
+  return zipStore([
+    ["[Content_Types].xml",`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/></Types>`],
+    ["_rels/.rels",`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>`],
+    ["xl/workbook.xml",`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="Köçürmələr" sheetId="1" r:id="rId1"/></sheets><definedNames><definedName name="_xlnm._FilterDatabase" localSheetId="0" hidden="1">'Köçürmələr'!$A$1:$H$${rows.length+1}</definedName></definedNames></workbook>`],
+    ["xl/_rels/workbook.xml.rels",`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>`],
+    ["xl/worksheets/sheet1.xml",sheet],
+    ["xl/styles.xml",styles]
+  ]);
+}
+$("kExport").addEventListener("click",()=>{
+  const y=$("kYear").value, rows=KROWS.filter(x=>x[2].startsWith(y)).sort((a,b)=>a[2].localeCompare(b[2])||a[1]-b[1]);
+  if(!rows.length){ toast(y?"Bu ildə faktura yoxdur":"Faktura yoxdur"); return; }
+  const a=document.createElement("a"); a.href=URL.createObjectURL(makeXlsx(rows)); a.download="Köçürmələr "+(y||"hamısı")+".xlsx";
+  document.body.appendChild(a); a.click(); setTimeout(()=>{URL.revokeObjectURL(a.href); a.remove();},1500);
+  toast("Köçürmələr "+(y||"hamısı")+".xlsx yükləndi");
+});
+
+/* ---- server ilə əlaqə ---- */
+async function sha256hex(t){
+  const b=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(t));
+  return [...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,"0")).join("");
+}
+async function api(action,payload,url){
+  url=url||(SESSION&&SESSION.url);
+  let res;
+  try{
+    res=await fetch(url,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},
+      body:JSON.stringify(Object.assign({action,token:SESSION&&SESSION.token},payload||{}))});
+  }catch(e){ const er=new Error("İnternet bağlantısı yoxdur"); er.net=true; throw er; }
+  let j; try{ j=await res.json(); }catch(e){ throw new Error("Server cavab vermədi"); }
+  if(!j.ok){
+    if(j.error==="auth"){ sessionEnded(); throw new Error("Sessiya bitib, yenidən daxil olun"); }
+    throw new Error(j.error||"Naməlum xəta");
+  }
+  return j;
+}
+function sessionEnded(){
+  try{ localStorage.removeItem("hf_session"); }catch(e){}
+  if(SESSION){ SESSION=null; alertLogin("Sessiya bitib. Yenidən daxil olun."); setTimeout(()=>location.reload(),1500); }
+}
+function alertLogin(t){ document.body.classList.add("locked"); $("login").classList.remove("busy"); $("loginErr").textContent=t||""; }
+
+/* ---- şirkət məlumatlarını formaya yaz ---- */
+function applyProfile(){
+  const p=PROFILE||{}, b=p.bank||[];
+  $("seller").value=p.seller||""; $("sellerTin").value=p.sellerTin||"";
+  for(let i=1;i<=6;i++) $("b"+i).value=b[i-1]||"";
+  $("signerLabel").textContent=p.signerLabel||"Fiziki şəxs"; $("pSignerLabel").textContent=p.signerLabel||"Fiziki şəxs";
+  $("signerName").textContent=p.signer||p.seller||"";
+  $("fAddr").textContent=p.address||""; $("fPhone").textContent=p.phone||"";
+  $("fEmail").textContent=p.email||""; $("fEmail").href=p.email?"mailto:"+p.email:"#";
+  $("whoName").textContent=p.name||"";
+  document.title=(p.name?p.name+" — ":"")+"Hesab Faktura";
+  const noAkt=p.showAkt===false;
+  $("tabA").hidden=noAkt; document.body.classList.toggle("noakt",noAkt);
+  if(noAkt&&TAB==="A") setTab("F");
+}
+function applyData(d){
+  PROFILE=d.profile||{}; CUSTOMERS=Array.isArray(d.customers)?d.customers:[];
+  KROWS=Array.isArray(d.kocur)?d.kocur:[]; kNorm();
+  kLastSent={}; kYears().forEach(y=>kLastSent[y]=kYearJson(y));
+  try{ localStorage.setItem(LSP+"data",JSON.stringify({profile:PROFILE,customers:CUSTOMERS})); localStorage.setItem(LSP+"kocur",JSON.stringify(KROWS)); }catch(e){}
+}
+
+/* ---- Köçürmələrin Drive-a yazılması ---- */
+let kTimer=null, kBusy=false, kAgain=false, kLastSent={};
+function kYears(){ return [...new Set(KROWS.map(x=>x[2].slice(0,4)))]; }
+function kYearJson(y){ return JSON.stringify(KROWS.filter(x=>x[2].startsWith(y))); }
+function setSync(t,cls){ const e=$("sync"); e.textContent=t; e.className=cls||""; }
+function kPush(){ if(!SESSION) return; setSync("Saxlanılır…"); clearTimeout(kTimer); kTimer=setTimeout(kSend,1200); }
+function blobToB64(blob){ return new Promise((ok,no)=>{ const fr=new FileReader(); fr.onload=()=>ok(String(fr.result).split(",")[1]); fr.onerror=no; fr.readAsDataURL(blob); }); }
+async function kSend(){
+  if(kBusy){ kAgain=true; return; }
+  kBusy=true; kAgain=false; clearTimeout(kTimer); kTimer=null;
+  try{
+    const xlsx={}, sent={};
+    for(const y of kYears()){
+      const js=kYearJson(y); if(kLastSent[y]===js) continue;
+      const rows=KROWS.filter(x=>x[2].startsWith(y)).sort((a,b)=>a[2].localeCompare(b[2])||a[1]-b[1]);
+      xlsx[y]=await blobToB64(makeXlsx(rows)); sent[y]=js;
+    }
+    await api("saveKocur",{rows:KROWS,xlsx});
+    Object.assign(kLastSent,sent);
+    setSync("Drive-da saxlanıldı ✓","ok");
+  }catch(e){
+    console.error(e); if(SESSION) setSync("Saxlanılmadı — yenidən cəhd üçün basın","err");
+  }finally{ kBusy=false; if(kAgain) kSend(); }
+}
+$("sync").addEventListener("click",()=>{ if($("sync").classList.contains("err")) kSend(); });
+window.addEventListener("beforeunload",e=>{ if(kTimer||kBusy||$("sync").classList.contains("err")){ e.preventDefault(); e.returnValue=""; } });
+
+/* ---- Ayarlar ---- */
+const S_FIELDS=["name","seller","sellerTin","signerLabel","signer","receiver","address","phone","email","smsSign"];
+function sCell(v,ta){ return ta?`<td><textarea rows="1">${xEsc(v||"")}</textarea></td>`:`<td><input value="${xEsc(v||"")}"></td>`; }
+function sAddRow(c){
+  c=c||["","","","","","",""];
+  const tr=document.createElement("tr");
+  tr.innerHTML=sCell(c[0])+sCell(c[1])+sCell(c[2])+sCell(c[3])+sCell(c[4],true)+sCell(c[5])+sCell(c[6])+'<td><button class="del" type="button" title="Sil" aria-label="Müştərini sil">✕</button></td>';
+  tr.querySelector(".del").addEventListener("click",()=>{ if(confirm((tr.querySelector("input").value||"Bu müştəri")+" silinsin?")) tr.remove(); });
+  $("sCust").appendChild(tr); return tr;
+}
+function sRender(){
+  const p=PROFILE||{}, b=p.bank||[];
+  S_FIELDS.forEach(f=>$("s_"+f).value=p[f]||"");
+  $("s_showAkt").checked=p.showAkt!==false;
+  for(let i=1;i<=6;i++) $("s_b"+i).value=b[i-1]||"";
+  $("sCust").innerHTML=""; CUSTOMERS.forEach(c=>sAddRow(c));
+  ["pOld","pNew","pNew2"].forEach(id=>$(id).value="");
+}
+$("sAdd").addEventListener("click",()=>{ const tr=sAddRow(); tr.querySelector("input").focus(); });
+$("sSave").addEventListener("click",async()=>{
+  const p=Object.assign({},PROFILE);
+  S_FIELDS.forEach(f=>p[f]=$("s_"+f).value.trim());
+  p.bank=[1,2,3,4,5,6].map(i=>$("s_b"+i).value.trim());
+  p.showAkt=$("s_showAkt").checked;
+  const cust=[...$("sCust").rows].map(tr=>[...tr.querySelectorAll("input,textarea")].map(e=>e.value.trim())).filter(c=>c[0]);
+  const btn=$("sSave"); btn.disabled=true;
+  try{
+    const j=await api("saveSettings",{profile:p,customers:cust});
+    const keep=$("cust").value!==""?CUSTOMERS[$("cust").value]:null;
+    PROFILE=j.data.profile; CUSTOMERS=j.data.customers;
+    try{ localStorage.setItem(LSP+"data",JSON.stringify({profile:PROFILE,customers:CUSTOMERS})); }catch(e){}
+    const hadAkt=!$("tabA").hidden;
+    applyProfile(); fillCustomers();
+    if(hadAkt&&PROFILE.showAkt===false){ aClearSrv(); aCalc(); }
+    if(keep){ const i=CUSTOMERS.findIndex(c=>c[0]===keep[0]); $("cust").value=i>=0?String(i):""; }
+    $("aGiver").value=PROFILE.signer||PROFILE.seller||$("aGiver").value;
+    save(); aCalc(); sRender(); toast("Ayarlar yadda saxlanıldı");
+  }catch(e){ toast("Saxlanılmadı: "+e.message); }
+  finally{ btn.disabled=false; }
+});
+$("pBtn").addEventListener("click",async()=>{
+  const o=$("pOld").value, n=$("pNew").value, n2=$("pNew2").value;
+  if(n.length<6){ toast("Yeni şifrə ən az 6 simvol olmalıdır"); return; }
+  if(n!==n2){ toast("Yeni şifrələr eyni deyil"); return; }
+  $("pBtn").disabled=true;
+  try{ await api("changePass",{old:o,pass:n}); ["pOld","pNew","pNew2"].forEach(id=>$(id).value=""); toast("Şifrə dəyişdirildi. Digər kompüterlərdə yenidən daxil olmaq lazım olacaq."); }
+  catch(e){ toast(e.message==="oldpass"?"Köhnə şifrə yanlışdır":e.message==="short"?"Şifrə çox qısadır":"Dəyişdirilmədi: "+e.message); }
+  finally{ $("pBtn").disabled=false; }
+});
+
+/* ---- köhnə (girişsiz) versiyadan qalan məlumatlar: bir dəfəlik ---- */
+async function migrateOld(d){
+  if(SESSION.u!==MIGRATE_FROM) return d;
+  try{
+    if(!localStorage.getItem(LSP+"hf")&&localStorage.getItem("hf_mezahir")) localStorage.setItem(LSP+"hf",localStorage.getItem("hf_mezahir"));
+    if(!localStorage.getItem(LSP+"akt")&&localStorage.getItem("akt_mezahir")) localStorage.setItem(LSP+"akt",localStorage.getItem("akt_mezahir"));
+    localStorage.removeItem("hf_mezahir"); localStorage.removeItem("akt_mezahir");
+  }catch(e){}
+  if(d.migrated) return d;
+  let rows=null; try{ rows=JSON.parse(localStorage.getItem("kocurmeler_mezahir")||"null"); }catch(e){}
+  const j=await api("migrate",{rows:Array.isArray(rows)?rows:[]});
+  try{ localStorage.removeItem("kocurmeler_mezahir"); }catch(e){}
+  return j.data;
+}
+
+function aClearSrv(){ [...$("srvRows").rows].forEach(tr=>tr.querySelectorAll("input").forEach(i=>i.value="")); }
+/* ---- tətbiqin işə düşməsi (girişdən sonra) ---- */
+function startApp(d){
+  LSP="hf_"+SESSION.u.slice(0,10)+"_";
+  applyData(d); applyProfile(); fillCustomers();
+  document.querySelectorAll("#sheet input").forEach(el=>{ if(el.id && el.id!=="receiver"){ el.readOnly=true; el.tabIndex=-1; } });
+  let as=null; try{ as=JSON.parse(localStorage.getItem(LSP+"akt")||"null"); }catch(e){}
+  aRender(as);
+  if(PROFILE.showAkt===false) aClearSrv();   // akt bağlıdırsa köhnə xidmət haqqı fakturaya düşməsin
+  const saved=load();
+  if(saved) render(saved);
+  else{ render({cust:"",nom:String(nextNumber()),date:today(),dateTxt:isoToTxt(today()),qeyd:true,receiver:PROFILE.receiver||"",rows:[]}); }
+  if(!$("receiver").value&&PROFILE.receiver) $("receiver").value=PROFILE.receiver;
+  if(!$("aGiver").value) $("aGiver").value=PROFILE.signer||PROFILE.seller||"";
+  /* ilk dəfə: aktda təhvil alan boşdursa fakturadakı adı götür */
+  if(!$("aReceiver").value&&$("receiver").value) $("aReceiver").value=$("receiver").value;
+  READY=true; aCalc(); setTab("F");
+  document.body.classList.remove("locked"); $("login").classList.remove("busy");
+  setSync("");
+}
+$("loginForm").addEventListener("submit",async e=>{
+  e.preventDefault();
+  const user=$("lUser").value.trim().toLowerCase(), pass=$("lPass").value;
+  if(!user||!pass) return;
+  $("lBtn").disabled=true; $("loginErr").textContent="";
+  try{
+    const u=await sha256hex(user), url=DIRECTORY[u];
+    if(!url){ await new Promise(r=>setTimeout(r,800)); throw new Error("login"); }
+    const j=await api("login",{user,pass},url);
+    SESSION={u,url,token:j.token,exp:j.exp};
+    try{ localStorage.setItem("hf_session",JSON.stringify(SESSION)); }catch(_){}
+    $("login").classList.add("busy");
+    LSP="hf_"+u.slice(0,10)+"_";
+    const d=await migrateOld(j.data);
+    $("lPass").value="";
+    startApp(d);
+  }catch(err){
+    SESSION=null; try{ localStorage.removeItem("hf_session"); }catch(_){}
+    $("login").classList.remove("busy");
+    $("loginErr").textContent=err.message==="login"?"İstifadəçi adı və ya şifrə yanlışdır":err.message;
+  }finally{ $("lBtn").disabled=false; }
+});
+$("logoutBtn").addEventListener("click",async()=>{
+  if((kTimer||kBusy)&&!confirm("Köçürmələr hələ Drive-a yazılır. Yenə də çıxılsın?")) return;
+  if(kTimer) await kSend();
+  try{ await api("logout"); }catch(e){}
+  try{ localStorage.removeItem("hf_session"); localStorage.removeItem(LSP+"data"); localStorage.removeItem(LSP+"kocur"); }catch(e){}
+  SESSION=null; kTimer=null; setSync("");
+  location.reload();
+});
+/* səhifə açılanda: əvvəlki giriş hələ etibarlıdırsa birbaşa aç */
+(async function(){
+  let s=null; try{ s=JSON.parse(localStorage.getItem("hf_session")||"null"); }catch(e){}
+  if(!s||!s.token||!(s.exp>Date.now())||DIRECTORY[s.u]!==s.url){ try{ localStorage.removeItem("hf_session"); }catch(e){} $("lUser").focus(); return; }
+  SESSION=s; LSP="hf_"+s.u.slice(0,10)+"_"; $("login").classList.add("busy");
+  try{ const j=await api("load"); startApp(await migrateOld(j.data)); }
+  catch(e){
+    if(e.net){
+      let c=null, k=null; try{ c=JSON.parse(localStorage.getItem(LSP+"data")||"null"); k=JSON.parse(localStorage.getItem(LSP+"kocur")||"null"); }catch(_){}
+      if(c){ startApp({profile:c.profile,customers:c.customers,kocur:k||[]}); toast("İnternet yoxdur — son yüklənmiş məlumatlar göstərilir"); return; }
+    }
+    if(SESSION){ SESSION=null; try{ localStorage.removeItem("hf_session"); }catch(_){} }
+    alertLogin(e.net?"İnternet bağlantısı yoxdur":"Yenidən daxil olun");
+  }
+})();
+</script>
+
+</body>
+</html>
