@@ -174,6 +174,8 @@ body.tabK .bar,body.tabK .hint{display:none}
 .ktable input.eqin{width:17ch;border:1px solid var(--line);background:var(--bg);border-radius:5px;padding:4px 6px;font-variant-numeric:tabular-nums;letter-spacing:.02em}
 .ktable input.eqin::placeholder{color:var(--muted);font-size:12px}
 .ktable .del{border:0;background:transparent;color:var(--muted);font-size:15px;padding:0 4px}
+.ktable td.nomlink{cursor:pointer;user-select:none;text-decoration:underline dotted;text-underline-offset:3px}
+.ktable td.nomlink:hover{color:var(--accent)}
 .kempty{padding:20px;text-align:center;color:var(--muted)}
 
 /* ===== giriş ===== */
@@ -718,7 +720,7 @@ async function saveToDrive(){
     let pdf;
     try{ pdf=await makePdfBase64(); }
     catch(e){ console.error(e); delete btn.dataset.busy; btn.textContent=label; return saveLocal(); }   // PDF kitabxanası yüklənmədisə: çap pəncərəsi
-    const j=await api("savePdf",{name:fileName(),pdf});
+    const j=await api("savePdf",{name:fileName(),pdf,year:$("dateCtl").value.slice(0,4)});
     kUpsert(); markSaved(); toast("Drive-da saxlanıldı: "+j.name);
   }catch(err){
     console.error(err); toast("Saxlanılmadı: "+err.message+". İnterneti yoxlayıb yenidən cəhd edin.");
@@ -962,6 +964,20 @@ $("kMenuBtn").addEventListener("mousedown",e=>{
   toast("Ləğv edildi. Status → \"Ləğv edildi\" süzgəcində görə bilərsiniz");
 });
 document.addEventListener("scroll",kHideMenu,true);
+async function kOpenPdf(x){
+  if(!SESSION){ toast("Əvvəlcə daxil olun"); return; }
+  const w=window.open("","_blank");   // popup bloklanmasın deyə pəncərə dərhal açılır
+  if(w){ try{ w.document.title=x[1]+" №-li Hesab Faktura"; w.document.body.style.cssText="font:16px sans-serif;padding:40px;color:#555"; w.document.body.textContent=x[1]+" №-li hesab faktura Drive-da axtarılır…"; }catch(_){} }
+  toast(x[1]+" №-li faktura axtarılır…");
+  try{
+    const j=await api("findPdf",{nom:x[1],firm:x[0],year:x[2].slice(0,4)});
+    if(w&&!w.closed) w.location.href=j.url; else window.open(j.url,"_blank");
+    toast("Açıldı: "+j.name);
+  }catch(e){
+    if(w&&!w.closed) w.close();
+    toast(e.message==="notfound"?x[1]+" №-li faktura üçün PDF Drive-da tapılmadı":e.message==="action"?"Serveri yeniləmək lazımdır (Kod.gs)":"Açılmadı: "+e.message);
+  }
+}
 function kRender(){
   kFillFilters();
   const list=kFiltered(), f=$("kFirm").value;
@@ -979,6 +995,9 @@ function kRender(){
       <td>${days!==null&&days>12?'<button type="button" class="sms">SMS kopyala</button>':""}</td>
       <td><button type="button" class="del" title="Sil" aria-label="Sil">×</button></td>`;
     tr.cells[1].textContent=x[0];
+    /* faktura № -nə 2 dəfə vurduqda Drive-da saxlanmış PDF açılır */
+    tr.cells[2].classList.add("nomlink"); tr.cells[2].title="2 dəfə vurun — saxlanmış PDF-i açın";
+    tr.cells[2].addEventListener("dblclick",ev=>{ ev.stopPropagation(); kOpenPdf(x); });
     /* dəyişiklik tarixçəsi: məbləğin üstünə gələndə həmişə görünür */
     if((x[7]||[]).length){ tr.cells[4].title=(x[7].length)+" dəfə dəyişdirilib:\n"+x[7].concat([x[3]]).map(v=>fmt(v)).join(" → ")+" manat"; tr.cells[4].style.cursor="help"; tr.cells[4].style.textDecoration="underline dotted"; }
     /* yaşıl rəng: sətrə 2 dəfə klikləyəndə gedir (tarixçə qalır) */
