@@ -213,6 +213,9 @@ body.tabK .tabs .tabchk{visibility:hidden}
 .spanel button.pri{background:var(--accent);border-color:var(--accent);color:#fff}
 body.noakt>.hint{display:none}
 .bar .nomlbl{position:relative}
+.bar .savewrap{position:relative;display:inline-flex}
+.savemsg{position:absolute;left:0;top:calc(100% + 6px);z-index:20;width:max-content;max-width:min(340px,80vw);background:#1f9d55;color:#fff;font-size:12.5px;line-height:1.35;font-weight:500;padding:7px 10px;border-radius:6px;box-shadow:0 4px 14px rgba(0,0,0,.18)}
+.savemsg::before{content:"";position:absolute;left:16px;top:-5px;border:5px solid transparent;border-top:0;border-bottom-color:#1f9d55}
 .nomwarn{position:absolute;left:0;top:calc(100% + 6px);z-index:20;width:max-content;max-width:min(320px,80vw);background:#b42318;color:#fff;font-size:12.5px;line-height:1.35;font-weight:500;padding:7px 10px;border-radius:6px;box-shadow:0 4px 14px rgba(0,0,0,.18);letter-spacing:0}
 .nomwarn::before{content:"";position:absolute;left:16px;top:-5px;border:5px solid transparent;border-top:0;border-bottom-color:#b42318}
 .spanel .schk{flex-direction:row;align-items:center;gap:8px;font-size:13px;color:var(--fg);padding-top:18px}
@@ -274,9 +277,8 @@ body.zero::before{content:none}
   </label>
   <label class="chk"><input id="qeyd" type="checkbox" checked> Təhvil qeydi</label>
   <button id="newBtn" class="pri" type="button">Yeni faktura</button>
-  <button id="saveBtn" class="pri" type="button">Yadda saxla (PDF)</button>
+  <span class="savewrap"><button id="saveBtn" class="pri" type="button">Yadda saxla (PDF)</button><span class="savemsg" id="saveMsg" role="status" hidden></span></span>
   <button id="printBtn" type="button">Çap et</button>
-  <button id="eqmBtn" type="button" title="e-taxes.gov.az-a yükləmək üçün e-qaimə paketi (zip)">e-qaimə paketi</button>
 </div>
 <div class="tabs" role="tablist">
   <button id="tabA" type="button" role="tab" aria-selected="true">Akt</button>
@@ -486,14 +488,13 @@ let TOTAL=0;
 let AKT_TOTAL=0;
 function curTotal(){ return (typeof TAB!=="undefined"&&TAB==="A")?AKT_TOTAL:TOTAL; }
 function updateOutputButtons(){
-  if(typeof TAB!=="undefined"&&(TAB==="K"||TAB==="S")){ ["saveBtn","printBtn","eqmBtn"].forEach(id=>{const b=$(id); if(b){b.disabled=true; b.title="Köçürmələr bölməsində çap yoxdur, Excel kimi yükləyin";}}); document.body.classList.remove("zero"); return; }
+  if(typeof TAB!=="undefined"&&(TAB==="K"||TAB==="S")){ ["saveBtn","printBtn"].forEach(id=>{const b=$(id); if(b){b.disabled=true; b.title="Köçürmələr bölməsində çap yoxdur, Excel kimi yükləyin";}}); document.body.classList.remove("zero"); return; }
   const zero=!(curTotal()>0), msg=zero?"Ödəniləcək məbləğ 0-dır, əvvəlcə məlumatları doldurun":"";
   const unsaved=!zero&&!isSaved();
   document.body.classList.toggle("zero",zero);
   document.body.classList.toggle("unsaved",unsaved);
-  ["saveBtn","printBtn","eqmBtn"].forEach(id=>{const b=$(id); if(!b||b.dataset.busy) return; b.disabled=zero; b.title=msg;});
+  ["saveBtn","printBtn"].forEach(id=>{const b=$(id); if(!b||b.dataset.busy) return; b.disabled=zero; b.title=msg;});
   const pb=$("printBtn"); if(pb&&!zero){ pb.disabled=unsaved; pb.title=unsaved?"Əvvəlcə yadda saxlayın, sonra çap edə bilərsiniz":""; }
-  const eb=$("eqmBtn"); if(eb&&!zero){ eb.disabled=unsaved; eb.title=unsaved?"Əvvəlcə yadda saxlayın":"e-taxes.gov.az-a yükləmək üçün e-qaimə paketi (zip)"; }
 }
 /* Çap: Köçürmələrdə eyni şirkət, eyni faktura №, eyni məbləğ və eyni tarixli qeyd varsa olar */
 function isSaved(){
@@ -686,6 +687,9 @@ $("newBtn").addEventListener("click",()=>{const n=nextNumber();render(blank(n));
 function maxNumber(y){ let max=0; (typeof KROWS!=="undefined"?KROWS:[]).forEach(x=>{ if(x[2].slice(0,4)===y&&x[1]>max) max=x[1]; }); return max; }
 function nextNumber(y){ return maxNumber(y||String(new Date().getFullYear()))+1; }
 /* xəbərdarlıq nömrə xanasının altında görünür */
+/* "159 №-li Hesab Faktura yadda saxlanıldı" — Yadda saxla düyməsinin altında */
+function saveMsg(){ const e=$("saveMsg"); e.textContent=$("nom").value.trim()+" №-li Hesab Faktura yadda saxlanıldı"; e.hidden=false; clearTimeout(saveMsg.t); saveMsg.t=setTimeout(()=>e.hidden=true,5000); }
+document.addEventListener("pointerdown",e=>{ if(!e.target.closest("#saveMsg")) $("saveMsg").hidden=true; });
 function nomWarn(t){ const e=$("nomWarn"); e.textContent=t; e.hidden=false; clearTimeout(nomWarn.t); nomWarn.t=setTimeout(()=>e.hidden=true,4500); }
 document.addEventListener("pointerdown",e=>{ if(!e.target.closest("#nomWarn,#nomCtl")) $("nomWarn").hidden=true; });
 /* düzgündürsə "" qaytarır, deyilsə xəbərdarlıq mətni */
@@ -778,7 +782,7 @@ function doPrint(){
 }
 window.addEventListener("afterprint",()=>{ if(document.body.classList.contains("printing")){ document.body.classList.remove("printing"); $("printBox").innerHTML=""; } });
 /* Drive qoşulana qədər: yadda saxla = Köçürmələrə yaz + PDF kimi saxlama pəncərəsi */
-function saveLocal(){ if(!(curTotal()>0)){ toast("Məbləğ 0-dır, sənəd saxlanıla bilməz"); return; } { const p=nomProblem(); if(p){ if(TAB!=="F"&&TAB!=="P"&&TAB!=="A") toast(p); else nomWarn(p); return; } } carRemember(); kUpsert(); markSaved(); toast("Yadda saxlanıldı, Köçürmələrə əlavə olundu"); fitPage(); window.print(); }
+function saveLocal(){ if(!(curTotal()>0)){ toast("Məbləğ 0-dır, sənəd saxlanıla bilməz"); return; } { const p=nomProblem(); if(p){ if(TAB!=="F"&&TAB!=="P"&&TAB!=="A") toast(p); else nomWarn(p); return; } } carRemember(); kUpsert(); markSaved(); saveMsg(); fitPage(); window.print(); }
 $("printBtn").addEventListener("click",doPrint);
 /* ---- Google Drive-a avtomatik saxlama (şirkətin öz Drive-ı) ---- */
 function loadScript(src){return new Promise((ok,no)=>{const s=document.createElement("script");s.src=src;s.onload=ok;s.onerror=()=>no(new Error("Kitabxana yüklənmədi"));document.head.appendChild(s);});}
@@ -837,7 +841,7 @@ async function saveToDrive(){
     const j=await api("savePdf",{name:fileName(),pdf,year:$("dateCtl").value.slice(0,4),nom:$("nom").value.trim(),firm:$("buyer").value.trim(),eqm});
     kPdfCache.clear(); carRemember();
     kUpsert(); markSaved();
-    toast("Drive-da saxlanıldı: "+j.name+(j.eqm?" · e-qaimə paketi: E-qaimeler/"+j.eqm:(eqmErr?" · e-qaimə paketi hazırlanmadı: "+eqmErr:"")));
+    saveMsg(); if(eqmErr) console.warn("e-qaimə:",eqmErr);
   }catch(err){
     console.error(err); toast("Saxlanılmadı: "+err.message+". İnterneti yoxlayıb yenidən cəhd edin.");
   }finally{ delete btn.dataset.busy; btn.textContent=label; updateOutputButtons(); }
@@ -1418,14 +1422,6 @@ async function eqmPackageBlob(){
   const r=buildEqm(), t=today().replace(/-/g,""), xmlName="C_QAIME1_1_"+r.buyer+"_"+r.seller+"_"+t+"_v_304.xml";
   return zipPackage([["vhf-inf/vhf.mf","VHF-Manifest-Version: 1.0\r\n\r\n"],[xmlName,r.xml]]);
 }
-$("eqmBtn").addEventListener("click",async()=>{
-  if(!isSaved()){ toast("Əvvəlcə yadda saxlayın"); return; }
-  let blob; try{ blob=await eqmPackageBlob(); }catch(e){ toast(e.message); return; }
-  const name=fileName()+".zip";
-  const a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download=name;
-  document.body.appendChild(a); a.click(); setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},1500);
-  toast("e-qaimə paketi yükləndi: "+name);
-});
 
 /* ---- Ayarlar ---- */
 const S_FIELDS=["name","seller","sellerTin","signerLabel","signer","receiver","address","phone","email","smsSign","eqmCode","eqmSvc","eqmRules"];
