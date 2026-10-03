@@ -672,7 +672,7 @@ function setTab(t){
   TAB=t; ["F","P","A","K","S"].forEach(k=>$("tab"+k).setAttribute("aria-selected",t===k));
   $("sheet").hidden=t!=="F"; $("sheetP").hidden=t!=="P"; $("sheetA").hidden=t!=="A"; $("sheetK").hidden=t!=="K"; $("sheetS").hidden=t!=="S";
   document.body.classList.toggle("tabK",t==="K"||t==="S");
-  if(t==="K") kRender();
+  if(t==="K"){ kRender(); kWake(); }
   if(t==="S") sRender();
   renderProtokol(); aHeader(); updateOutputButtons(); centerMY();
 }
@@ -720,7 +720,8 @@ async function saveToDrive(){
     let pdf;
     try{ pdf=await makePdfBase64(); }
     catch(e){ console.error(e); delete btn.dataset.busy; btn.textContent=label; return saveLocal(); }   // PDF kitabxanası yüklənmədisə: çap pəncərəsi
-    const j=await api("savePdf",{name:fileName(),pdf,year:$("dateCtl").value.slice(0,4)});
+    const j=await api("savePdf",{name:fileName(),pdf,year:$("dateCtl").value.slice(0,4),nom:$("nom").value.trim(),firm:$("buyer").value.trim()});
+    kPdfCache.clear();
     kUpsert(); markSaved(); toast("Drive-da saxlanıldı: "+j.name);
   }catch(err){
     console.error(err); toast("Saxlanılmadı: "+err.message+". İnterneti yoxlayıb yenidən cəhd edin.");
@@ -964,24 +965,36 @@ $("kMenuBtn").addEventListener("mousedown",e=>{
   toast("Ləğv edildi. Status → \"Ləğv edildi\" süzgəcində görə bilərsiniz");
 });
 document.addEventListener("scroll",kHideMenu,true);
+/* PDF-lər: siçan № üstünə gələndə əvvəlcədən yüklənməyə başlayır, bir dəfə açılan yaddaşda qalır */
+const kPdfCache=new Map();
+function kPdfKey(x){ return x[2].slice(0,4)+"|"+x[1]+"|"+x[0]; }
+function kPdfFetch(x){
+  const k=kPdfKey(x);
+  if(!kPdfCache.has(k)){
+    const p=api("findPdf",{nom:x[1],firm:x[0],year:x[2].slice(0,4)}).then(j=>{
+      if(!j.pdf) return j;   // köhnə server
+      const bin=atob(j.pdf), bytes=new Uint8Array(bin.length); for(let i=0;i<bin.length;i++) bytes[i]=bin.charCodeAt(i);
+      return {name:j.name,url:j.url,src:URL.createObjectURL(new Blob([bytes],{type:"application/pdf"}))};
+    });
+    p.catch(()=>kPdfCache.delete(k));   // tapılmayanda/xətada növbəti dəfə yenidən soruşulsun
+    kPdfCache.set(k,p);
+  }
+  return kPdfCache.get(k);
+}
+function kWake(){ if(SESSION) fetch(SESSION.url,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:'{"action":"ping"}'}).catch(()=>{}); }
 async function kOpenPdf(x){
   if(!SESSION){ toast("Əvvəlcə daxil olun"); return; }
   const w=window.open("","_blank");   // popup bloklanmasın deyə pəncərə dərhal açılır
-  if(w){ try{ w.document.title=x[1]+" №-li Hesab Faktura"; w.document.body.style.cssText="font:16px sans-serif;padding:40px;color:#555"; w.document.body.textContent=x[1]+" №-li hesab faktura Drive-da axtarılır…"; }catch(_){} }
-  toast(x[1]+" №-li faktura axtarılır…");
+  if(w){ try{ w.document.title=x[1]+" №-li Hesab Faktura"; w.document.body.style.cssText="font:16px sans-serif;padding:40px;color:#555;background:#fff"; w.document.body.textContent=x[1]+" №-li hesab faktura açılır…"; }catch(_){} }
   try{
-    const j=await api("findPdf",{nom:x[1],firm:x[0],year:x[2].slice(0,4)});
-    if(!j.pdf){ if(w&&!w.closed) w.location.href=j.url; else window.open(j.url,"_blank"); toast("Açıldı: "+j.name); return; }   // köhnə server
-    /* PDF saytın içində, brauzerin öz PDF baxıcısında açılır */
-    const bin=atob(j.pdf), bytes=new Uint8Array(bin.length); for(let i=0;i<bin.length;i++) bytes[i]=bin.charCodeAt(i);
-    const src=URL.createObjectURL(new Blob([bytes],{type:"application/pdf"}));
+    const j=await kPdfFetch(x);
+    if(!j.src){ if(w&&!w.closed) w.location.href=j.url; else window.open(j.url,"_blank"); return; }
     if(w&&!w.closed){
       const t=String(j.name).replace(/\.pdf$/i,"").replace(/[<&>]/g,"");
       w.document.open();
-      w.document.write('<!doctype html><html><head><meta charset="utf-8"><title>'+t+'</title><style>html,body{margin:0;height:100%;background:#525659}embed{display:block;width:100%;height:100%;border:0}</style></head><body><embed src="'+src+'" type="application/pdf"></body></html>');
+      w.document.write('<!doctype html><html><head><meta charset="utf-8"><title>'+t+'</title><style>html,body{margin:0;height:100%;background:#525659}embed{display:block;width:100%;height:100%;border:0}</style></head><body><embed src="'+j.src+'" type="application/pdf"></body></html>');
       w.document.close();
-    } else window.open(src,"_blank");
-    toast("Açıldı: "+j.name);
+    } else window.open(j.src,"_blank");
   }catch(e){
     if(w&&!w.closed) w.close();
     toast(e.message==="notfound"?x[1]+" №-li faktura üçün PDF Drive-da tapılmadı":e.message==="action"?"Serveri yeniləmək lazımdır (Kod.gs)":"Açılmadı: "+e.message);
@@ -1007,6 +1020,9 @@ function kRender(){
     /* faktura № -nə 2 dəfə vurduqda Drive-da saxlanmış PDF açılır */
     tr.cells[2].classList.add("nomlink"); tr.cells[2].title="2 dəfə vurun — saxlanmış PDF-i açın";
     tr.cells[2].addEventListener("dblclick",ev=>{ ev.stopPropagation(); kOpenPdf(x); });
+    let hv=null;
+    tr.cells[2].addEventListener("mouseenter",()=>{ hv=setTimeout(()=>kPdfFetch(x).catch(()=>{}),250); });
+    tr.cells[2].addEventListener("mouseleave",()=>clearTimeout(hv));
     /* dəyişiklik tarixçəsi: məbləğin üstünə gələndə həmişə görünür */
     if((x[7]||[]).length){ tr.cells[4].title=(x[7].length)+" dəfə dəyişdirilib:\n"+x[7].concat([x[3]]).map(v=>fmt(v)).join(" → ")+" manat"; tr.cells[4].style.cursor="help"; tr.cells[4].style.textDecoration="underline dotted"; }
     /* yaşıl rəng: sətrə 2 dəfə klikləyəndə gedir (tarixçə qalır) */
