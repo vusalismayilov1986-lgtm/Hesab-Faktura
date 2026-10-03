@@ -1289,13 +1289,20 @@ $("sync").addEventListener("click",()=>{ if($("sync").classList.contains("err"))
 window.addEventListener("beforeunload",e=>{ if(kTimer||kBusy||$("sync").classList.contains("err")){ e.preventDefault(); e.returnValue=""; } });
 
 /* ================= e-QAİMƏ (e-taxes.gov.az XML, QAIME_1 — mallar/işlər/xidmətlər) ================= */
+/* standart kodlar (Ayarlarda dəyişmək olar) */
+const EQM_DEF={code:"8708999700",svc:"9945202100",rules:"Antifriz = 3820000000\nTosol = 3820000000\nYağ = 2710198200"};
+const eqmP=k=>{ const v=String((PROFILE||{})[k]||"").trim(); return v||EQM_DEF[{eqmCode:"code",eqmSvc:"svc",eqmRules:"rules"}[k]]; };
 function eqmRules(){
-  return String(PROFILE.eqmRules||"").split(/\n/).map(l=>l.split(/\s*[=:→]\s*|\s+-\s+/)).filter(a=>a.length>=2&&a[0].trim()&&/^\d{10}$/.test(a[a.length-1].trim())).map(a=>[unitFold(a[0].trim()),a[a.length-1].trim()]);
+  return String(eqmP("eqmRules")).split(/\n/).map(l=>l.split(/\s*[=:→]\s*|\s+-\s+/)).filter(a=>a.length>=2&&a[0].trim()&&/^\d{10}$/.test(a[a.length-1].trim())).map(a=>[unitFold(a[0].trim()),a[a.length-1].trim()]);
 }
 function eqmCodeFor(name,isSvc){
-  if(isSvc&&/^\d{10}$/.test(PROFILE.eqmSvc||"")) return PROFILE.eqmSvc;
-  const n=unitFold(name); for(const [w,c] of eqmRules()) if(n.includes(w)) return c;
-  return /^\d{10}$/.test(PROFILE.eqmCode||"")?PROFILE.eqmCode:"";
+  if(isSvc&&/^\d{10}$/.test(eqmP("eqmSvc"))) return eqmP("eqmSvc");
+  const n=unitFold(name), part=UNIT_NOT_LIQUID.test(n);   // "Yağ filtri", "Antifriz bakı" — hissədir, maye kodu almır
+  for(const [w,c] of eqmRules()){
+    if(part&&/yag|antifri|tosol|maye/.test(w)) continue;
+    if(new RegExp("(^|[^a-z0-9])"+w.replace(/[.*+?^${}()|[\]\\]/g,"\\$&")).test(n)) return c;
+  }
+  return /^\d{10}$/.test(eqmP("eqmCode"))?eqmP("eqmCode"):"";
 }
 function xmlEsc(v){ return String(v).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&apos;"}[c])); }
 const f4=n=>(Math.round(n*10000)/10000).toFixed(4), f2=n=>(Math.round(n*100)/100).toFixed(2);
@@ -1418,6 +1425,7 @@ function sAddRow(c){
 function sRender(){
   const p=PROFILE||{}, b=p.bank||[];
   S_FIELDS.forEach(f=>$("s_"+f).value=p[f]||"");
+  ["eqmCode","eqmSvc","eqmRules"].forEach(f=>{ if(!$("s_"+f).value) $("s_"+f).value=eqmP(f); });
   $("s_showAkt").checked=p.showAkt!==false; $("s_vat").checked=p.vat===true;
   for(let i=1;i<=6;i++) $("s_b"+i).value=b[i-1]||"";
   $("sCust").innerHTML=""; CUSTOMERS.forEach(c=>sAddRow(c));
