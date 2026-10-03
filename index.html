@@ -209,8 +209,12 @@ body.locked #login{display:flex}
 .spanel button{font:inherit;font-size:13px;font-weight:500;border:1px solid var(--line);background:var(--bg);color:var(--fg);border-radius:6px;padding:7px 12px;cursor:pointer}
 .spanel button.pri{background:var(--accent);border-color:var(--accent);color:#fff}
 body.noakt>.hint{display:none}
+.bar .nomlbl{position:relative}
+.nomwarn{position:absolute;left:0;top:calc(100% + 6px);z-index:20;width:max-content;max-width:min(320px,80vw);background:#b42318;color:#fff;font-size:12.5px;line-height:1.35;font-weight:500;padding:7px 10px;border-radius:6px;box-shadow:0 4px 14px rgba(0,0,0,.18);letter-spacing:0}
+.nomwarn::before{content:"";position:absolute;left:16px;top:-5px;border:5px solid transparent;border-top:0;border-bottom-color:#b42318}
 .spanel .schk{flex-direction:row;align-items:center;gap:8px;font-size:13px;color:var(--fg);padding-top:18px}
 .spanel .schk input{width:auto}
+.smsg{color:#1f9d55;font-weight:600;font-size:13px}
 .sact{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
 .ctable{width:100%;border-collapse:collapse;font-size:13px}
 .ctable th{font-size:12px;font-weight:600;color:var(--muted);text-align:left;padding:4px;border-bottom:1px solid var(--line)}
@@ -252,8 +256,9 @@ body.zero::before{content:none}
   <label class="cust">Hesabı alan şirkət
     <select id="cust"></select>
   </label>
-  <label>Faktura №
+  <label class="nomlbl">Faktura №
     <input id="nomCtl" type="number" min="1" style="width:90px">
+    <span class="nomwarn" id="nomWarn" role="alert" hidden></span>
   </label>
   <label>Tarix
     <input id="dateCtl" type="date">
@@ -437,7 +442,7 @@ body.zero::before{content:none}
     <thead><tr><th>Şirkətin adı</th><th>VÖEN</th><th>Müqavilə №</th><th>Müqavilə tarixi</th><th>Direktor (protokol üçün)</th><th>Telefon, e-mail</th><th>Aktın başlığı (boş = AVTOMOBİLİN TƏMİRİ AKTI)</th><th></th></tr></thead>
     <tbody id="sCust"></tbody>
   </table></div>
-  <div class="sact"><button id="sAdd" type="button">+ Müştəri əlavə et</button><span style="flex:1"></span><button id="sSave" class="pri" type="button">Ayarları yadda saxla</button></div>
+  <div class="sact"><button id="sAdd" type="button">+ Müştəri əlavə et</button><span style="flex:1"></span><span id="sMsg" class="smsg" role="status"></span><button id="sSave" class="pri" type="button">Ayarları yadda saxla</button></div>
   <h2>Şifrəni dəyiş</h2>
   <div class="spass">
     <label>Köhnə şifrə<input id="pOld" type="password" autocomplete="current-password"></label>
@@ -456,7 +461,7 @@ const DIRECTORY={
   "840a7960754b39774a002761918304b711c46f7cd1cfa773cf9f73a6fdf0b769": "https://script.google.com/macros/s/AKfycbz1laySFObprfkyd7JyRxBKmuHoM91_SfFMMr5NiCE443kwlsurKZUz810ZpTvxjK4U/exec"   // 1-ci şirkət — Apps Script linki bura
 };
 const MIGRATE_FROM="840a7960754b39774a002761918304b711c46f7cd1cfa773cf9f73a6fdf0b769";  // köhnə brauzer məlumatları bu istifadəçiyə aiddir
-let CUSTOMERS=[], PROFILE={}, SESSION=null, LSP="hf_none_";
+let CUSTOMERS=[], PROFILE={}, CARS={}, SESSION=null, LSP="hf_none_";
 const $=id=>document.getElementById(id);
 const ROWS=12, MAXROWS=21;   // 20 mal + 1 xidmət haqqı sətri
 let TOTAL=0;
@@ -579,7 +584,7 @@ $("sheet").addEventListener("input",e=>{ if(e.target.id==="nom")$("nomCtl").valu
 $("cust").addEventListener("change",applyCustomer);
 $("nomCtl").addEventListener("input",()=>{$("nom").value=$("nomCtl").value;save();});
 /* nömrə yazıb çıxanda yoxlanılır: ardıcıllıq pozulursa növbəti düzgün nömrə qoyulur */
-$("nomCtl").addEventListener("change",()=>{ const p=nomProblem(); if(p&&parseInt($("nomCtl").value,10)>0){ const nx=nextNumber($("dateCtl").value.slice(0,4)); toast(p); $("nomCtl").value=$("nom").value=String(nx); save(); } });
+$("nomCtl").addEventListener("change",()=>{ const p=nomProblem(); if(p&&parseInt($("nomCtl").value,10)>0){ const nx=nextNumber($("dateCtl").value.slice(0,4)); nomWarn(p); $("nomCtl").value=$("nom").value=String(nx); save(); } });
 $("dateCtl").addEventListener("input",()=>{$("dateTxt").value=isoToTxt($("dateCtl").value);save();});
 $("qeyd").addEventListener("change",()=>{$("qeydBlock").hidden=!$("qeyd").checked;save();});
 $("sheet").addEventListener("keydown",e=>{
@@ -607,6 +612,30 @@ $("rows").addEventListener("change",e=>{
   if(e.target.matches(".un") && unByMouse && e.target.value){ unByMouse=false; nextCell(e.target); }
 });
 $("rows").addEventListener("mouseup",e=>{ const t=e.target; if(t.dataset&&t.dataset.jf){ e.preventDefault(); delete t.dataset.jf; } });
+/* ---- Malın adına görə ölçü vahidi avtomatik seçilir ---- */
+function unitFold(s){ return String(s||"").toLowerCase().replace(/[ğ]/g,"g").replace(/[ı]/g,"i").replace(/[ə]/g,"e").replace(/[ş]/g,"s").replace(/[ç]/g,"c").replace(/[ö]/g,"o").replace(/[ü]/g,"u").replace(/q/g,"k").replace(/\u0307/g,""); }
+const UNIT_RULES=[
+  [/mufta/,"dəst"],                                   // Mufta
+  [/nakla[dt]k/,"dəst"],                              // Naklatka, Naqlatka, Nakladka
+  [/antifri[zs]|tosol|soyuducu ?maye/,"litr",true],   // Antifriz, Antifris, Tosol
+  [/(^|[^a-z])yag/,"litr",true]                       // Yağ, Yag, Mühərrik yağı
+];
+/* "Yağ filtri", "Antifriz bakı" kimi hissələr litr deyil */
+const UNIT_NOT_LIQUID=/filt|sprey|yaglayic|bak|nasos|datcik|sensor|kapak|slank|patrubok|kipkac|salnik|probk|karter|radiator/;
+function autoUnitFor(name){
+  const n=unitFold(name);
+  for(const [re,u,liquid] of UNIT_RULES){ if(re.test(n)){ if(liquid&&UNIT_NOT_LIQUID.test(n)) return ""; return u; } }
+  return "";
+}
+/* əl ilə seçilmiş ölçü vahidinə toxunulmur; avtomatik seçilmişi ad dəyişəndə yenilənir */
+function applyAutoUnit(tr){
+  const nm=tr.querySelector(".nm"), un=tr.querySelector(".un"); if(!nm||!un||nm.readOnly) return;
+  if(un.value&&!un.dataset.auto) return;
+  const u=nm.value.trim()?autoUnitFor(nm.value):"";
+  if(u){ un.disabled=false; if(un.value!==u){ un.value=u; } un.dataset.auto="1"; }
+  else if(un.dataset.auto){ un.value=""; delete un.dataset.auto; }
+}
+document.addEventListener("change",e=>{ if(e.target.matches&&e.target.matches("select.un")) delete e.target.dataset.auto; },true);
 /* Miqdar və qiymətə yalnız rəqəm (və bir onluq ayırıcı: vergül və ya nöqtə) */
 function cleanNumber(v,dec){
   v=v.replace(/[^0-9.,]/g,"");
@@ -617,7 +646,7 @@ function cleanNumber(v,dec){
 }
 $("rows").addEventListener("input",e=>{
   const t=e.target;
-  if(t.matches(".nm")){ const c=capFirst(t.value); if(c!==t.value){ const p=t.selectionStart; t.value=c; t.setSelectionRange(p,p); } }
+  if(t.matches(".nm")){ const c=capFirst(t.value); if(c!==t.value){ const p=t.selectionStart; t.value=c; t.setSelectionRange(p,p); } applyAutoUnit(t.closest("tr")); }
   if(!t.matches(".qt,.pr")) return;
   const c=cleanNumber(t.value,t.matches(".pr")?2:3);
   if(c!==t.value){ const pos=Math.max(0,(t.selectionStart||0)-(t.value.length-c.length)); t.value=c; try{t.setSelectionRange(pos,pos);}catch(_){} }
@@ -635,6 +664,9 @@ $("newBtn").addEventListener("click",()=>{render(blank($("nom").value));aClear()
 /* Nömrələr ardıcıl olmalıdır: həmin ildə saxlanmış ən böyük nömrə + 1-dən böyük nömrə olmaz */
 function maxNumber(y){ let max=0; (typeof KROWS!=="undefined"?KROWS:[]).forEach(x=>{ if(x[2].slice(0,4)===y&&x[1]>max) max=x[1]; }); return max; }
 function nextNumber(y){ return maxNumber(y||String(new Date().getFullYear()))+1; }
+/* xəbərdarlıq nömrə xanasının altında görünür */
+function nomWarn(t){ const e=$("nomWarn"); e.textContent=t; e.hidden=false; clearTimeout(nomWarn.t); nomWarn.t=setTimeout(()=>e.hidden=true,4500); }
+document.addEventListener("pointerdown",e=>{ if(!e.target.closest("#nomWarn,#nomCtl")) $("nomWarn").hidden=true; });
 /* düzgündürsə "" qaytarır, deyilsə xəbərdarlıq mətni */
 function nomProblem(){
   const n=parseInt($("nom").value,10), d=$("dateCtl").value;
@@ -698,7 +730,7 @@ window.addEventListener("beforeprint",()=>{oldTitle=document.title; document.tit
 window.addEventListener("afterprint",()=>{document.title=oldTitle;});
 function doPrint(){ if(!(curTotal()>0)){ toast("Məbləğ 0-dır, sənəd çap edilə bilməz"); return; } if(!isSaved()){ toast("Əvvəlcə yadda saxlayın, sonra çap edə bilərsiniz"); return; } fitPage(); window.print(); }
 /* Drive qoşulana qədər: yadda saxla = Köçürmələrə yaz + PDF kimi saxlama pəncərəsi */
-function saveLocal(){ if(!(curTotal()>0)){ toast("Məbləğ 0-dır, sənəd saxlanıla bilməz"); return; } { const p=nomProblem(); if(p){ toast(p); return; } } kUpsert(); markSaved(); toast("Yadda saxlanıldı, Köçürmələrə əlavə olundu"); fitPage(); window.print(); }
+function saveLocal(){ if(!(curTotal()>0)){ toast("Məbləğ 0-dır, sənəd saxlanıla bilməz"); return; } { const p=nomProblem(); if(p){ if(TAB!=="F"&&TAB!=="P"&&TAB!=="A") toast(p); else nomWarn(p); return; } } carRemember(); kUpsert(); markSaved(); toast("Yadda saxlanıldı, Köçürmələrə əlavə olundu"); fitPage(); window.print(); }
 $("printBtn").addEventListener("click",doPrint);
 /* ---- Google Drive-a avtomatik saxlama (şirkətin öz Drive-ı) ---- */
 function loadScript(src){return new Promise((ok,no)=>{const s=document.createElement("script");s.src=src;s.onload=ok;s.onerror=()=>no(new Error("Kitabxana yüklənmədi"));document.head.appendChild(s);});}
@@ -718,7 +750,7 @@ async function makePdfBase64(){
 }
 function fileName(){ if(TAB==="P"||TAB==="A") return pdfName(); return ($("nom").value.trim()+" №-li Hesab  Faktura,"+$("buyer").value.trim()).replace(/[\\/:*?"<>|]/g," ").trim(); }
 async function saveToDrive(){
-  { const p=nomProblem(); if(p){ toast(p); $("nomCtl").focus(); return; } }
+  { const p=nomProblem(); if(p){ nomWarn(p); $("nomCtl").focus(); return; } }
   if(!(curTotal()>0)){ toast("Məbləğ 0-dır, sənəd saxlanıla bilməz"); return; }
   if(!SESSION){ toast("Əvvəlcə daxil olun"); return; }
   if(!$("buyer").value.trim()){ toast("Əvvəlcə müştərini seçin"); return; }
@@ -728,7 +760,7 @@ async function saveToDrive(){
     try{ pdf=await makePdfBase64(); }
     catch(e){ console.error(e); delete btn.dataset.busy; btn.textContent=label; return saveLocal(); }   // PDF kitabxanası yüklənmədisə: çap pəncərəsi
     const j=await api("savePdf",{name:fileName(),pdf,year:$("dateCtl").value.slice(0,4),nom:$("nom").value.trim(),firm:$("buyer").value.trim()});
-    kPdfCache.clear();
+    kPdfCache.clear(); carRemember();
     kUpsert(); markSaved(); toast("Drive-da saxlanıldı: "+j.name);
   }catch(err){
     console.error(err); toast("Saxlanılmadı: "+err.message+". İnterneti yoxlayıb yenidən cəhd edin.");
@@ -873,7 +905,8 @@ $("sheetA").addEventListener("input",e=>{
   if(t.matches(".qt")){ const c=cleanNumber(t.value,3); if(c!==t.value) t.value=c; }
   if(t.id==="carKm"){ const c=t.value.replace(/\D/g,""); if(c!==t.value) t.value=c; }
   if(t.matches("#srvRows .nm,#prtRows .nm")){ const c=capFirst(t.value); if(c!==t.value){ const p=t.selectionStart; t.value=c; t.setSelectionRange(p,p); } }
-  if(t.id==="carPlate"){ const c=formatPlate(t.value); if(c!==t.value){ t.value=c; t.setSelectionRange(c.length,c.length); } }
+  if(t.matches("#prtRows .nm")) applyAutoUnit(t.closest("tr"));
+  if(t.id==="carPlate"){ const c=formatPlate(t.value); if(c!==t.value){ t.value=c; t.setSelectionRange(c.length,c.length); } carLookup(); }
   aCalc();
 });
 /* Qeydiyyat nişanı: ən çox 7 simvol, böyük hərf, "99  AN  280" forması */
@@ -1160,8 +1193,9 @@ function applyProfile(){
 function applyData(d){
   PROFILE=d.profile||{}; CUSTOMERS=Array.isArray(d.customers)?d.customers:[];
   KROWS=Array.isArray(d.kocur)?d.kocur:[]; kNorm();
+  CARS=(d.cars&&typeof d.cars==="object")?d.cars:{};
   kLastSent={}; kYears().forEach(y=>kLastSent[y]=kYearJson(y));
-  try{ localStorage.setItem(LSP+"data",JSON.stringify({profile:PROFILE,customers:CUSTOMERS})); localStorage.setItem(LSP+"kocur",JSON.stringify(KROWS)); }catch(e){}
+  try{ localStorage.setItem(LSP+"data",JSON.stringify({profile:PROFILE,customers:CUSTOMERS,cars:CARS})); localStorage.setItem(LSP+"kocur",JSON.stringify(KROWS)); }catch(e){}
 }
 
 /* ---- Köçürmələrin Drive-a yazılması ---- */
@@ -1227,7 +1261,8 @@ $("sSave").addEventListener("click",async()=>{
     if(hadAkt&&PROFILE.showAkt===false){ aClearSrv(); aCalc(); }
     if(keep){ const i=CUSTOMERS.findIndex(c=>c[0]===keep[0]); $("cust").value=i>=0?String(i):""; }
     $("aGiver").value=PROFILE.signer||PROFILE.seller||$("aGiver").value;
-    save(); aCalc(); sRender(); toast("Ayarlar yadda saxlanıldı");
+    save(); aCalc(); sRender(); toast("Ayarların dəyişikliyi yadda saxlanıldı");
+    const m=$("sMsg"); m.textContent="✓ Ayarların dəyişikliyi yadda saxlanıldı"; clearTimeout(m.t); m.t=setTimeout(()=>m.textContent="",6000);
   }catch(e){ toast("Saxlanılmadı: "+e.message); }
   finally{ btn.disabled=false; }
 });
@@ -1256,6 +1291,21 @@ async function migrateOld(d){
   return j.data;
 }
 
+/* ---- avtomobillər: qeydiyyat nişanı yazılanda marka/model və şassi avtomatik gəlir ---- */
+function carKey(p){ return String(p||"").toUpperCase().replace(/\s+/g,""); }
+function carLookup(){
+  const c=CARS[carKey($("carPlate").value)]; if(!c) return;
+  if(c.model) $("carModel").value=c.model; if(c.vin) $("carVin").value=c.vin;
+  toast("Avtomobil tapıldı: "+[c.model,c.vin].filter(Boolean).join(", "));
+}
+function carRemember(){
+  const plate=$("carPlate").value.trim(), k=carKey(plate), model=$("carModel").value.trim(), vin=$("carVin").value.trim();
+  if(!k||!(model||vin)) return;
+  const o=CARS[k]; if(o&&o.model===model&&o.vin===vin) return;
+  CARS[k]={plate,model,vin,t:Date.now()};
+  try{ const c=JSON.parse(localStorage.getItem(LSP+"data")||"null"); if(c){ c.cars=CARS; localStorage.setItem(LSP+"data",JSON.stringify(c)); } }catch(e){}
+  if(SESSION) api("saveCar",{plate,model,vin}).catch(e=>console.warn("saveCar",e));
+}
 function aClearSrv(){ [...$("srvRows").rows].forEach(tr=>tr.querySelectorAll("input").forEach(i=>i.value="")); }
 /* ---- tətbiqin işə düşməsi (girişdən sonra) ---- */
 function startApp(d){
@@ -1315,7 +1365,7 @@ $("logoutBtn").addEventListener("click",async()=>{
   catch(e){
     if(e.net){
       let c=null, k=null; try{ c=JSON.parse(localStorage.getItem(LSP+"data")||"null"); k=JSON.parse(localStorage.getItem(LSP+"kocur")||"null"); }catch(_){}
-      if(c){ startApp({profile:c.profile,customers:c.customers,kocur:k||[]}); toast("İnternet yoxdur — son yüklənmiş məlumatlar göstərilir"); return; }
+      if(c){ startApp({profile:c.profile,customers:c.customers,cars:c.cars,kocur:k||[]}); toast("İnternet yoxdur — son yüklənmiş məlumatlar göstərilir"); return; }
     }
     if(SESSION){ SESSION=null; try{ localStorage.removeItem("hf_session"); }catch(_){} }
     alertLogin(e.net?"İnternet bağlantısı yoxdur":"Yenidən daxil olun");
