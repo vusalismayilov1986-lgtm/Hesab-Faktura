@@ -218,6 +218,7 @@ body.noakt>.hint{display:none}
 .spanel .schk{flex-direction:row;align-items:center;gap:8px;font-size:13px;color:var(--fg);padding-top:18px}
 .spanel .schk input{width:auto}
 .smsg{color:#1f9d55;font-weight:600;font-size:13px}
+.srules{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--muted)}
 .sact{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
 .ctable{width:100%;border-collapse:collapse;font-size:13px}
 .ctable th{font-size:12px;font-weight:600;color:var(--muted);text-align:left;padding:4px;border-bottom:1px solid var(--line)}
@@ -275,6 +276,7 @@ body.zero::before{content:none}
   <button id="newBtn" class="pri" type="button">Yeni faktura</button>
   <button id="saveBtn" class="pri" type="button">Yadda saxla (PDF)</button>
   <button id="printBtn" type="button">Çap et</button>
+  <button id="eqmBtn" type="button" title="e-taxes.gov.az-a yükləmək üçün e-qaimə paketi (zip)">e-qaimə paketi</button>
 </div>
 <div class="tabs" role="tablist">
   <button id="tabA" type="button" role="tab" aria-selected="true">Akt</button>
@@ -445,6 +447,13 @@ body.zero::before{content:none}
     <label>SMS sonu (imza)<input id="s_smsSign"></label>
     <label class="schk"><input type="checkbox" id="s_showAkt"> Akt bölməsini göstər</label>
   </div>
+  <h2>e-qaimə</h2>
+  <div class="sgrid">
+    <label>Standart mal kodu (10 rəqəm)<input id="s_eqmCode" inputmode="numeric" maxlength="10" placeholder="məs. 8708999709"></label>
+    <label>"Xidmət haqqı (usta)" kodu (10 rəqəm)<input id="s_eqmSvc" inputmode="numeric" maxlength="10"></label>
+    <label class="schk"><input type="checkbox" id="s_vat"> ƏDV ödəyicisiyəm (18% üstünə gəlinir)</label>
+  </div>
+  <label class="srules">Mal adına görə kod (hər sətirdə: söz = kod)<textarea id="s_eqmRules" rows="4" placeholder="Mufta = 8708930000&#10;Yağ = 2710198800&#10;Naklatka = 8708301000"></textarea></label>
   <h2>Müştərilər</h2>
   <div class="cwrap"><table class="ctable">
     <thead><tr><th>Şirkətin adı</th><th>VÖEN</th><th>Müqavilə №</th><th>Müqavilə tarixi</th><th>Direktor (protokol üçün)</th><th>Telefon, e-mail</th><th>Aktın başlığı (boş = AVTOMOBİLİN TƏMİRİ AKTI)</th><th></th></tr></thead>
@@ -477,13 +486,14 @@ let TOTAL=0;
 let AKT_TOTAL=0;
 function curTotal(){ return (typeof TAB!=="undefined"&&TAB==="A")?AKT_TOTAL:TOTAL; }
 function updateOutputButtons(){
-  if(typeof TAB!=="undefined"&&(TAB==="K"||TAB==="S")){ ["saveBtn","printBtn"].forEach(id=>{const b=$(id); if(b){b.disabled=true; b.title="Köçürmələr bölməsində çap yoxdur, Excel kimi yükləyin";}}); document.body.classList.remove("zero"); return; }
+  if(typeof TAB!=="undefined"&&(TAB==="K"||TAB==="S")){ ["saveBtn","printBtn","eqmBtn"].forEach(id=>{const b=$(id); if(b){b.disabled=true; b.title="Köçürmələr bölməsində çap yoxdur, Excel kimi yükləyin";}}); document.body.classList.remove("zero"); return; }
   const zero=!(curTotal()>0), msg=zero?"Ödəniləcək məbləğ 0-dır, əvvəlcə məlumatları doldurun":"";
   const unsaved=!zero&&!isSaved();
   document.body.classList.toggle("zero",zero);
   document.body.classList.toggle("unsaved",unsaved);
-  ["saveBtn","printBtn"].forEach(id=>{const b=$(id); if(!b||b.dataset.busy) return; b.disabled=zero; b.title=msg;});
+  ["saveBtn","printBtn","eqmBtn"].forEach(id=>{const b=$(id); if(!b||b.dataset.busy) return; b.disabled=zero; b.title=msg;});
   const pb=$("printBtn"); if(pb&&!zero){ pb.disabled=unsaved; pb.title=unsaved?"Əvvəlcə yadda saxlayın, sonra çap edə bilərsiniz":""; }
+  const eb=$("eqmBtn"); if(eb&&!zero){ eb.disabled=unsaved; eb.title=unsaved?"Əvvəlcə yadda saxlayın":"e-taxes.gov.az-a yükləmək üçün e-qaimə paketi (zip)"; }
 }
 /* Çap: Köçürmələrdə eyni şirkət, eyni faktura №, eyni məbləğ və eyni tarixli qeyd varsa olar */
 function isSaved(){
@@ -1278,8 +1288,125 @@ async function kSend(){
 $("sync").addEventListener("click",()=>{ if($("sync").classList.contains("err")) kSend(); });
 window.addEventListener("beforeunload",e=>{ if(kTimer||kBusy||$("sync").classList.contains("err")){ e.preventDefault(); e.returnValue=""; } });
 
+/* ================= e-QAİMƏ (e-taxes.gov.az XML, QAIME_1 — mallar/işlər/xidmətlər) ================= */
+function eqmRules(){
+  return String(PROFILE.eqmRules||"").split(/\n/).map(l=>l.split(/\s*[=:→]\s*|\s+-\s+/)).filter(a=>a.length>=2&&a[0].trim()&&/^\d{10}$/.test(a[a.length-1].trim())).map(a=>[unitFold(a[0].trim()),a[a.length-1].trim()]);
+}
+function eqmCodeFor(name,isSvc){
+  if(isSvc&&/^\d{10}$/.test(PROFILE.eqmSvc||"")) return PROFILE.eqmSvc;
+  const n=unitFold(name); for(const [w,c] of eqmRules()) if(n.includes(w)) return c;
+  return /^\d{10}$/.test(PROFILE.eqmCode||"")?PROFILE.eqmCode:"";
+}
+function xmlEsc(v){ return String(v).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&apos;"}[c])); }
+const f4=n=>(Math.round(n*10000)/10000).toFixed(4), f2=n=>(Math.round(n*100)/100).toFixed(2);
+/* Vergi proqramının (eFP) özünün yaratdığı faylın başlığı — eyni saxlanılır */
+const EQM_HEAD="<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<?xml-stylesheet type=\"text/xsl\" href=\"#stylesheet\"?>\n<!DOCTYPE root [\n<!ATTLIST xsl:stylesheet\nid ID #REQUIRED>\n]>\n<root version =\"304\" kod= \"QAIME_1\"  xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xsi:noNamespaceSchemaLocation= \"QAIME_1.xsd\" >\n<xsl:stylesheet id=\"stylesheet\" version=\"1.0\" xmlns:xsl=\"http://www.w3.org/1999/XSL/Transform\" > <xsl:template match=\"xsl:stylesheet\" /> <xsl:template match=\"/root\"> <html> <head> <style> body {background-color: white; font-family:  Arial, sans-serif; } .paper {padding:5px; } table {width: 100%; font-size: 16px; } table tr td {padding: 10px 15px; text-align: left; width:50%; } .products table {border-collapse: collapse; font-size: 14px; } .products table th, #products table td  {border: 1px solid #000; padding: 10px; } .products table td {width:auto; border: 1px solid #000; text-align:center; } .products table th {text-align:center; } .noPadding {padding: 40px 0px; } .total tr :nth-child(odd) {width:40%; } .total tr :nth-child(even) {width:10%; } </style> </head> <body> <table class=\"paper\"> <tr> <td>Alan tərəfin VÖEN-i:</td> <td><xsl:value-of select=\"qaimeKime\"/></td> </tr> <tr> <td>Alan tərəfin adı:</td> <td><xsl:value-of select=\"qaimeKimeAd\"/></td> </tr> <tr> <td>Satan tərəfin VÖEN-i:</td> <td><xsl:value-of select=\"qaimeKimden\"/></td> </tr> <tr> <td>Qeyd</td> <td><xsl:value-of select=\"des\"/></td> </tr> <tr> <td>Əlavə qeyd</td> <td><xsl:value-of select=\"des2\"/></td> </tr> <tr> <td>Obyektin adı</td> <td><xsl:value-of select=\"ma\"/></td> </tr> <tr> <td>Obyektin kodu</td> <td><xsl:value-of select=\"mk\"/></td> </tr> <tr> <td class=\"products noPadding\" colspan=\"2\"> <table> <thead> <th>Mal kodu</th> <th>Mal adı</th> <th>Bar kod</th> <th>Ölçü vahidi</th> <th>Malın miqdarı</th> <th>Malın buraxılış qiyməti</th> <th>Cəmi qiyməti</th> <th>Aksiz dərəcəsi</th> <th>Aksiz məbləği</th> <th>Cəmi məbləğ</th> <th>ƏDV-yə cəlb edilən məbləğ</th> <th>ƏDV-yə cəlb edilməyən məbləğ</th> <th>ƏDV-dən azad olunan</th> <th>ƏDV-yə 0 dərəcə ilə cəlb edilən məbləğ</th> <th>Ödənilməli ƏDV</th> <th>Yol vergisi məbləği</th> <th>Yekun məbləğ</th> </thead> <tbody class=\"productTable\"> <xsl:for-each select=\"product/qaimeTable/row\"> <tr> <td><xsl:value-of select=\"c1\"/></td> <td><xsl:value-of select=\"c2\"/></td> <td><xsl:value-of select=\"c17\"/></td> <td><xsl:value-of select=\"c3\"/></td> <td><xsl:value-of select=\"c4\"/></td> <td><xsl:value-of select=\"c5\"/></td> <td><xsl:value-of select=\"c6\"/></td> <td><xsl:value-of select=\"c7\"/></td> <td><xsl:value-of select=\"c8\"/></td> <td><xsl:value-of select=\"c9\"/></td> <td><xsl:value-of select=\"c10\"/></td> <td><xsl:value-of select=\"c11\"/></td> <td><xsl:value-of select=\"c12\"/></td> <td><xsl:value-of select=\"c13\"/></td> <td><xsl:value-of select=\"c14\"/></td> <td><xsl:value-of select=\"c15\"/></td> <td><xsl:value-of select=\"c16\"/></td> </tr> </xsl:for-each> </tbody> </table> </td> </tr> </table> <table class=\"total\"> <tr> <td>Malların cəmi qiyməti</td> <td><xsl:value-of select=\"product/qaimeYekunTable/row/c1\"/></td> <td>Malların cəmi məbləği</td> <td><xsl:value-of select=\"product/qaimeYekunTable/row/c3\"/></td> </tr> <tr> <td>Malların aksiz cəmi məbləği</td> <td><xsl:value-of select=\"product/qaimeYekunTable/row/c2\"/></td> <td>Malların ƏDV-yə cəlb edilən cəmi məbləği</td> <td><xsl:value-of select=\"product/qaimeYekunTable/row/c4\"/></td> </tr> <tr> <td>Malların cəmi ödənilməli ƏDV məbləği</td> <td><xsl:value-of select=\"product/qaimeYekunTable/row/c8\"/></td> <td>Malların  ƏDV-yə cəlb edilməyən cəmi məbləği </td> <td><xsl:value-of select=\"product/qaimeYekunTable/row/c5\"/></td> </tr> <tr> <td>ƏDV-dən azad olunan</td> <td><xsl:value-of select=\"product/qaimeYekunTable/row/c6\"/></td> <td>Malların  ƏDV-yə 0 dərəcə ilə cəlb edilən cəmi məbləği</td> <td><xsl:value-of select=\"product/qaimeYekunTable/row/c7\"/></td> </tr> <tr> <td>Yekun məbləğ</td> <td><xsl:value-of select=\"product/qaimeYekunTable/row/c9\"/></td> <td></td> <td></td> </tr> </table> </body> </html> </xsl:template> </xsl:stylesheet>";
+const fq=n=>String(Math.round(n*10000)/10000);   // miqdar/qiymət: 1, 4.5, 13.33
+function buildEqm(){
+  const seller=String(PROFILE.sellerTin||$("sellerTin").value).trim(), buyer=$("buyerTin").value.trim();
+  if(!/^\d{10}$/.test(seller)) throw new Error("Ayarlarda sizin VÖEN 10 rəqəm olmalıdır");
+  if(!/^\d{10}$/.test(buyer)) throw new Error("Alıcının VÖEN-i 10 rəqəm olmalıdır (Ayarlar → Müştərilər)");
+  const vat=PROFILE.vat===true, rows=[], noCode=[];
+  for(const tr of $("rows").rows){
+    const nm=tr.querySelector(".nm").value.trim(); if(!nm) continue;
+    const un=tr.querySelector(".un").value||"ədəd", q=num(tr.querySelector(".qt").value), p=num(tr.querySelector(".pr").value);
+    if(!(q>0)||!(p>0)) continue;
+    const code=eqmCodeFor(nm,tr.classList.contains("svc")); if(!code) noCode.push(nm);
+    const c6=q*p, c14=vat?c6*0.18:0;
+    rows.push({code,nm,un,q,p,c6,c10:vat?c6:0,c11:vat?0:c6,c14,c16:c6+c14});
+  }
+  if(!rows.length) throw new Error("Fakturada mal yoxdur");
+  if(noCode.length) throw new Error("Mal kodu yoxdur: "+noCode.join(", ")+". Ayarlar → e-qaimə bölməsində standart kodu yazın");
+  const S=k=>rows.reduce((a,r)=>a+r[k],0);
+  const nom=$("nom").value.trim();
+  const des=("Hesab Faktura № "+nom).slice(0,150);
+  const ct=$("contract").value.trim(), cd=$("contractDate").value.trim();
+  const des2=ct?((cd?cd+" "+yearSuffix(cd)+" il tarixli ":"")+ct+" saylı Müqaviləyə əsasən").slice(0,150):"";
+  const body=rows.map((r,i)=>`			<row no = '${i}'>
+				<c1>${r.code}</c1>
+				<c2>${xmlEsc(r.nm.slice(0,300))}</c2>
+				<c3>${xmlEsc(r.un.slice(0,150))}</c3>
+				<c4>${fq(r.q)}</c4>
+				<c5>${fq(r.p)}</c5>
+				<c6>${f4(r.c6)}</c6>
+				<c7>0</c7>
+				<c8>0</c8>
+				<c9>${f4(r.c6)}</c9>
+				<c10>${f4(r.c10)}</c10>
+				<c11>${f4(r.c11)}</c11>
+				<c12>0</c12>
+				<c13>0</c13>
+				<c14>${f4(r.c14)}</c14>
+				<c15>0</c15>
+				<c16>${f4(r.c16)}</c16>
+				<c17>0</c17>
+				<productId>0</productId>
+			</row>`).join("\n");
+  const xml=EQM_HEAD+`	<qaimeKime>${buyer}</qaimeKime>
+	<qaimeKimden>${seller}</qaimeKimden>
+	<ds></ds>
+	<dn></dn>
+	<des>${xmlEsc(des)}</des>
+	<des2>${xmlEsc(des2)}</des2>
+	<ma></ma>
+	<mk></mk>
+	<product>
+		<qaimeTable>
+${body}
+		</qaimeTable>
+		<qaimeYekunTable>
+			<row>
+				<c1>${f2(S("c6"))}</c1>
+				<c2>0</c2>
+				<c3>${f2(S("c6"))}</c3>
+				<c4>${f2(S("c10"))}</c4>
+				<c5>${f2(S("c11"))}</c5>
+				<c6>0</c6>
+				<c7>0</c7>
+				<c8>${f2(S("c14"))}</c8>
+				<c9>${f2(S("c16"))}</c9>
+				<c10>0</c10>
+			</row>
+		</qaimeYekunTable>
+	</product>
+</root>
+`;
+  return {xml,buyer,seller};
+}
+/* Paket: vhf-inf/vhf.mf + C_QAIME1_1_<alıcı VÖEN>_<satıcı VÖEN>_<tarix>_v_304.xml (zip) */
+async function deflateRaw(bytes){
+  if(typeof CompressionStream==="undefined") return null;
+  try{ const cs=new CompressionStream("deflate-raw"); const out=new Response(new Blob([bytes]).stream().pipeThrough(cs)); return new Uint8Array(await out.arrayBuffer()); }catch(e){ return null; }
+}
+async function zipPackage(files){
+  const enc=new TextEncoder(), parts=[], central=[]; let off=0;
+  const u16=v=>[v&255,(v>>>8)&255], u32=v=>[v&255,(v>>>8)&255,(v>>>16)&255,(v>>>24)&255];
+  const t=new Date(), dtime=(t.getHours()<<11)|(t.getMinutes()<<5)|(t.getSeconds()>>1), ddate=((t.getFullYear()-1980)<<9)|((t.getMonth()+1)<<5)|t.getDate();
+  for(const [name,data] of files){
+    const nb=enc.encode(name), db=typeof data==="string"?enc.encode(data):data, crc=crc32(db);
+    const z=await deflateRaw(db), method=z?8:0, body=z||db;
+    const head=[...u32(0x04034b50),...u16(20),...u16(0),...u16(method),...u16(dtime),...u16(ddate),...u32(crc),...u32(body.length),...u32(db.length),...u16(nb.length),...u16(0)];
+    parts.push(new Uint8Array(head),nb,body);
+    central.push(new Uint8Array([...u32(0x02014b50),...u16(20),...u16(20),...u16(0),...u16(method),...u16(dtime),...u16(ddate),...u32(crc),...u32(body.length),...u32(db.length),...u16(nb.length),...u16(0),...u16(0),...u16(0),...u16(0),...u32(0),...u32(off)]),nb);
+    off+=head.length+nb.length+body.length;
+  }
+  const cdSize=central.reduce((s,p)=>s+p.length,0);
+  const end=new Uint8Array([...u32(0x06054b50),...u16(0),...u16(0),...u16(files.length),...u16(files.length),...u32(cdSize),...u32(off),...u16(0)]);
+  return new Blob([...parts,...central,end],{type:"application/zip"});
+}
+$("eqmBtn").addEventListener("click",async()=>{
+  if(!isSaved()){ toast("Əvvəlcə yadda saxlayın"); return; }
+  let r; try{ r=buildEqm(); }catch(e){ toast(e.message); return; }
+  const t=today().replace(/-/g,""), xmlName="C_QAIME1_1_"+r.buyer+"_"+r.seller+"_"+t+"_v_304.xml";
+  const blob=await zipPackage([["vhf-inf/vhf.mf","VHF-Manifest-Version: 1.0\r\n\r\n"],[xmlName,r.xml]]);
+  const name="paket_"+t+"_"+$("nom").value.trim()+".zip";
+  const a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download=name;
+  document.body.appendChild(a); a.click(); setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},1500);
+  toast("e-qaimə paketi yükləndi: "+name);
+});
+
 /* ---- Ayarlar ---- */
-const S_FIELDS=["name","seller","sellerTin","signerLabel","signer","receiver","address","phone","email","smsSign"];
+const S_FIELDS=["name","seller","sellerTin","signerLabel","signer","receiver","address","phone","email","smsSign","eqmCode","eqmSvc","eqmRules"];
 function sCell(v,ta){ return ta?`<td><textarea rows="1">${xEsc(v||"")}</textarea></td>`:`<td><input value="${xEsc(v||"")}"></td>`; }
 function sAddRow(c){
   c=c||["","","","","","",""];
@@ -1291,7 +1418,7 @@ function sAddRow(c){
 function sRender(){
   const p=PROFILE||{}, b=p.bank||[];
   S_FIELDS.forEach(f=>$("s_"+f).value=p[f]||"");
-  $("s_showAkt").checked=p.showAkt!==false;
+  $("s_showAkt").checked=p.showAkt!==false; $("s_vat").checked=p.vat===true;
   for(let i=1;i<=6;i++) $("s_b"+i).value=b[i-1]||"";
   $("sCust").innerHTML=""; CUSTOMERS.forEach(c=>sAddRow(c));
   ["pOld","pNew","pNew2"].forEach(id=>$(id).value="");
@@ -1301,7 +1428,7 @@ $("sSave").addEventListener("click",async()=>{
   const p=Object.assign({},PROFILE);
   S_FIELDS.forEach(f=>p[f]=$("s_"+f).value.trim());
   p.bank=[1,2,3,4,5,6].map(i=>$("s_b"+i).value.trim());
-  p.showAkt=$("s_showAkt").checked;
+  p.showAkt=$("s_showAkt").checked; p.vat=$("s_vat").checked;
   const cust=[...$("sCust").rows].map(tr=>[...tr.querySelectorAll("input,textarea")].map(e=>e.value.trim())).filter(c=>c[0]);
   const btn=$("sSave"); btn.disabled=true;
   try{
